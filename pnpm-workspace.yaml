@@ -1,0 +1,5 @@
+allowBuilds:
+  '@nestjs/core': false
+  unrs-resolver: false
+overrides:
+  uuid@<14.0.0: '>=14.0.0'
