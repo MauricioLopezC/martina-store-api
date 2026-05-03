@@ -34,16 +34,23 @@ describe('Auth (e2e)', () => {
     await app.close();
   });
 
-  describe('POST /users (setup)', () => {
-    it('creates a test user', () => {
+  describe('POST /auth/register', () => {
+    it('creates a user and does not expose the password', () => {
       return request(app.getHttpServer())
-        .post('/users')
+        .post('/auth/register')
         .send(testUser)
         .expect(201)
         .expect((res) => {
           expect(res.body.email).toBe(testUser.email);
           expect(res.body.password).toBeUndefined();
         });
+    });
+
+    it('returns 400 with missing required fields', () => {
+      return request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: testUser.email })
+        .expect(400);
     });
   });
 
