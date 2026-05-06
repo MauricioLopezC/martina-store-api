@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { NotFoundError } from '../../common/errors/not-found.error';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './entities/category.entity';
@@ -27,7 +28,7 @@ export class CategoriesService {
       where: { id },
       relations: ['parent', 'children'],
     });
-    if (!category) throw new NotFoundException(`Category #${id} not found`);
+    if (!category) throw new NotFoundError(`Category #${id} not found`);
     return category;
   }
 

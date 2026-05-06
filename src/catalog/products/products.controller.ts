@@ -8,8 +8,11 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Public } from '../../auth/decorators/public.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -92,8 +95,13 @@ export class ProductsController {
 
   @Post(':id/images')
   @Roles(Role.Admin)
-  createImage(@Param('id') id: string, @Body() dto: CreateImageDto) {
-    return this.productsService.createImage(+id, dto);
+  @UseInterceptors(FileInterceptor('file'))
+  createImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: CreateImageDto,
+  ) {
+    return this.productsService.createImage(+id, file, dto);
   }
 
   @Patch(':id/images/:imageId')

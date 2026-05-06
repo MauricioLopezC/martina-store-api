@@ -1,15 +1,14 @@
-import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateImageDto {
-  @IsString()
-  @IsNotEmpty()
-  url: string;
-
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   @Min(0)
   @IsOptional()
   position?: number;
 
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   isCover?: boolean;

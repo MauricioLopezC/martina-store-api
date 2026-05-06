@@ -1,6 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConflictError } from '../../common/errors/conflict.error';
+import { NotFoundError } from '../../common/errors/not-found.error';
 import { CreateAttributeDto } from './dto/create-attribute.dto';
 import { CreateAttributeValueDto } from './dto/create-attribute-value.dto';
 import { UpdateAttributeDto } from './dto/update-attribute.dto';
@@ -19,7 +21,7 @@ export class AttributesService {
 
   async create(dto: CreateAttributeDto): Promise<Attribute> {
     const existing = await this.attributesRepo.findOneBy({ name: dto.name });
-    if (existing) throw new ConflictException(`Attribute "${dto.name}" already exists`);
+    if (existing) throw new ConflictError(`Attribute "${dto.name}" already exists`);
     const attribute = this.attributesRepo.create(dto);
     return this.attributesRepo.save(attribute);
   }
@@ -33,7 +35,7 @@ export class AttributesService {
       where: { id },
       relations: ['values'],
     });
-    if (!attribute) throw new NotFoundException(`Attribute #${id} not found`);
+    if (!attribute) throw new NotFoundError(`Attribute #${id} not found`);
     return attribute;
   }
 
@@ -41,7 +43,7 @@ export class AttributesService {
     const attribute = await this.findOne(id);
     if (dto.name && dto.name !== attribute.name) {
       const existing = await this.attributesRepo.findOneBy({ name: dto.name });
-      if (existing) throw new ConflictException(`Attribute "${dto.name}" already exists`);
+      if (existing) throw new ConflictError(`Attribute "${dto.name}" already exists`);
     }
     Object.assign(attribute, dto);
     return this.attributesRepo.save(attribute);
@@ -56,7 +58,7 @@ export class AttributesService {
     await this.findOne(attributeId);
     const existing = await this.valuesRepo.findOneBy({ attributeId, value: dto.value });
     if (existing) {
-      throw new ConflictException(`Value "${dto.value}" already exists for this attribute`);
+      throw new ConflictError(`Value "${dto.value}" already exists for this attribute`);
     }
     const attrValue = this.valuesRepo.create({ ...dto, attributeId });
     return this.valuesRepo.save(attrValue);
@@ -68,11 +70,11 @@ export class AttributesService {
     dto: UpdateAttributeValueDto,
   ): Promise<AttributeValue> {
     const attrValue = await this.valuesRepo.findOneBy({ id: valueId, attributeId });
-    if (!attrValue) throw new NotFoundException(`Value #${valueId} not found`);
+    if (!attrValue) throw new NotFoundError(`Value #${valueId} not found`);
     if (dto.value && dto.value !== attrValue.value) {
       const existing = await this.valuesRepo.findOneBy({ attributeId, value: dto.value });
       if (existing) {
-        throw new ConflictException(`Value "${dto.value}" already exists for this attribute`);
+        throw new ConflictError(`Value "${dto.value}" already exists for this attribute`);
       }
     }
     Object.assign(attrValue, dto);
@@ -81,7 +83,7 @@ export class AttributesService {
 
   async removeValue(attributeId: number, valueId: number): Promise<void> {
     const attrValue = await this.valuesRepo.findOneBy({ id: valueId, attributeId });
-    if (!attrValue) throw new NotFoundException(`Value #${valueId} not found`);
+    if (!attrValue) throw new NotFoundError(`Value #${valueId} not found`);
     await this.valuesRepo.remove(attrValue);
   }
 }

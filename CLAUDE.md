@@ -66,8 +66,23 @@ JWT payload shape: `{ sub: user.id, email, role }`.
 **Role-based access** — `Role` enum (`user` | `admin`). Apply with `@Roles(Role.Admin)` decorator + `RolesGuard`. The guard reads roles from route metadata via `Reflector`; routes without `@Roles` pass through.
 
 **Global setup** (`main.ts`):
+- `AppExceptionFilter` — catches `AppError` subclasses and maps them to HTTP responses
 - `ValidationPipe({ whitelist: true })` — strips unknown properties from DTOs
 - `ClassSerializerInterceptor` — applies `class-transformer` exclusions (e.g., `password`)
+
+## Error handling
+
+Services never throw HTTP exceptions. They throw application-level errors from `src/common/errors/`:
+
+| Class | HTTP status |
+|---|---|
+| `NotFoundError` | 404 |
+| `ConflictError` | 409 |
+| `UnauthorizedError` | 401 |
+
+All extend `AppError` (abstract base). The `AppExceptionFilter` (`src/common/filters/app-exception.filter.ts`) catches them and returns `{ statusCode, message, error }`.
+
+**Adding a new error type:** create a class extending `AppError` in `src/common/errors/`, then add an `instanceof` branch in `AppExceptionFilter`.
 
 ## Testing
 

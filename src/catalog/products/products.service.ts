@@ -1,6 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { ConflictError } from '../../common/errors/conflict.error';
+import { NotFoundError } from '../../common/errors/not-found.error';
+import { IStorageService, STORAGE_SERVICE } from '../../storage/storage.service.interface';
 import { AttributeValue } from '../attributes/entities/attribute-value.entity';
 import { Category } from '../categories/entities/category.entity';
 import { CreateImageDto } from './dto/create-image.dto';
@@ -29,6 +32,8 @@ export class ProductsService {
     private readonly categoriesRepo: Repository<Category>,
     @InjectRepository(AttributeValue)
     private readonly attrValuesRepo: Repository<AttributeValue>,
+    @Inject(STORAGE_SERVICE)
+    private readonly storageService: IStorageService,
   ) {}
 
   private toSlug(name: string): string {
@@ -44,7 +49,7 @@ export class ProductsService {
   private async resolveSlug(name: string, slug?: string): Promise<string> {
     const candidate = slug ?? this.toSlug(name);
     const existing = await this.productsRepo.findOneBy({ slug: candidate });
-    if (existing) throw new ConflictException(`Slug "${candidate}" is already in use`);
+    if (existing) throw new ConflictError(`Slug "${candidate}" is already in use`);
     return candidate;
   }
 
@@ -73,7 +78,7 @@ export class ProductsService {
       where: { id },
       relations: PRODUCT_RELATIONS,
     });
-    if (!product) throw new NotFoundException(`Product #${id} not found`);
+    if (!product) throw new NotFoundError(`Product #${id} not found`);
     return product;
   }
 
@@ -82,7 +87,7 @@ export class ProductsService {
       where: { slug, status: ProductStatus.Published },
       relations: PRODUCT_RELATIONS,
     });
-    if (!product) throw new NotFoundException(`Product "${slug}" not found`);
+    if (!product) throw new NotFoundError(`Product "${slug}" not found`);
     return product;
   }
 
@@ -90,7 +95,7 @@ export class ProductsService {
     const product = await this.findOne(id);
     if (dto.slug && dto.slug !== product.slug) {
       const existing = await this.productsRepo.findOneBy({ slug: dto.slug });
-      if (existing) throw new ConflictException(`Slug "${dto.slug}" is already in use`);
+      if (existing) throw new ConflictError(`Slug "${dto.slug}" is already in use`);
     }
     if (dto.categoryIds !== undefined) {
       product.categories = dto.categoryIds.length
@@ -112,7 +117,7 @@ export class ProductsService {
   async createVariant(productId: number, dto: CreateVariantDto): Promise<ProductVariant> {
     await this.findOne(productId);
     const skuExists = await this.variantsRepo.findOneBy({ sku: dto.sku });
-    if (skuExists) throw new ConflictException(`SKU "${dto.sku}" is already in use`);
+    if (skuExists) throw new ConflictError(`SKU "${dto.sku}" is already in use`);
     const attributeValues = dto.attributeValueIds?.length
       ? await this.attrValuesRepo.findBy({ id: In(dto.attributeValueIds) })
       : [];
@@ -129,10 +134,10 @@ export class ProductsService {
       where: { id: variantId, productId },
       relations: ['attributeValues'],
     });
-    if (!variant) throw new NotFoundException(`Variant #${variantId} not found`);
+    if (!variant) throw new NotFoundError(`Variant #${variantId} not found`);
     if (dto.sku && dto.sku !== variant.sku) {
       const skuExists = await this.variantsRepo.findOneBy({ sku: dto.sku });
-      if (skuExists) throw new ConflictException(`SKU "${dto.sku}" is already in use`);
+      if (skuExists) throw new ConflictError(`SKU "${dto.sku}" is already in use`);
     }
     if (dto.attributeValueIds !== undefined) {
       variant.attributeValues = dto.attributeValueIds.length
@@ -146,15 +151,20 @@ export class ProductsService {
 
   async removeVariant(productId: number, variantId: number): Promise<void> {
     const variant = await this.variantsRepo.findOneBy({ id: variantId, productId });
-    if (!variant) throw new NotFoundException(`Variant #${variantId} not found`);
+    if (!variant) throw new NotFoundError(`Variant #${variantId} not found`);
     await this.variantsRepo.remove(variant);
   }
 
   // Images
 
-  async createImage(productId: number, dto: CreateImageDto): Promise<ProductImage> {
+  async createImage(
+    productId: number,
+    file: Express.Multer.File,
+    dto: CreateImageDto,
+  ): Promise<ProductImage> {
     await this.findOne(productId);
-    const image = this.imagesRepo.create({ ...dto, productId });
+    const url = await this.storageService.upload(file);
+    const image = this.imagesRepo.create({ ...dto, productId, url });
     return this.imagesRepo.save(image);
   }
 
@@ -164,14 +174,15 @@ export class ProductsService {
     dto: UpdateImageDto,
   ): Promise<ProductImage> {
     const image = await this.imagesRepo.findOneBy({ id: imageId, productId });
-    if (!image) throw new NotFoundException(`Image #${imageId} not found`);
+    if (!image) throw new NotFoundError(`Image #${imageId} not found`);
     Object.assign(image, dto);
     return this.imagesRepo.save(image);
   }
 
   async removeImage(productId: number, imageId: number): Promise<void> {
     const image = await this.imagesRepo.findOneBy({ id: imageId, productId });
-    if (!image) throw new NotFoundException(`Image #${imageId} not found`);
+    if (!image) throw new NotFoundError(`Image #${imageId} not found`);
+    await this.storageService.delete(image.url);
     await this.imagesRepo.remove(image);
   }
 }
