@@ -7,6 +7,9 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { AttributesModule } from './catalog/attributes/attributes.module';
+import { CategoriesModule } from './catalog/categories/categories.module';
+import { ProductsModule } from './catalog/products/products.module';
 
 @Module({
   imports: [
@@ -27,6 +30,9 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     }),
     UsersModule,
     AuthModule,
+    AttributesModule,
+    CategoriesModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [
