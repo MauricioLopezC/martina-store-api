@@ -28,7 +28,7 @@ export class Product {
   @Column({ unique: true })
   slug: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   brand: string | null;
 
   @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.Draft })

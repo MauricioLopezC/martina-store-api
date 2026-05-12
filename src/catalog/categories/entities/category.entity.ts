@@ -11,7 +11,7 @@ export class Category {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   parentId: number | null;
 
   @ManyToOne(() => Category, (c) => c.children, { nullable: true, onDelete: 'SET NULL' })

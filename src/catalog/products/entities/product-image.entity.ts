@@ -21,6 +21,6 @@ export class ProductImage {
   @Column({ default: false })
   isCover: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   altText: string | null;
 }
