@@ -15,11 +15,14 @@ describe('Products catalog (e2e)', () => {
   let dataSource: DataSource;
   let adminToken: string;
   let productId: number;
+  const createdProductIds: number[] = [];
   const uploadedFiles: string[] = [];
+
+  const run = Date.now().toString(36);
 
   const adminUser = {
     name: 'Admin Catalog Test',
-    email: 'admin-catalog-e2e@example.com',
+    email: `admin-catalog-e2e-${run}@example.com`,
     password: 'admin1234',
   };
 
@@ -37,11 +40,6 @@ describe('Products catalog (e2e)', () => {
 
     dataSource = moduleFixture.get(DataSource);
 
-    // Limpiar datos residuales de ejecuciones anteriores fallidas
-    await dataSource.query(`DELETE FROM products WHERE slug = 'remera-test-e2e'`);
-    await dataSource.query(`DELETE FROM users WHERE email = $1`, [adminUser.email]);
-    await dataSource.query(`DELETE FROM users WHERE email = 'regular-e2e@example.com'`);
-
     const hashed = await bcrypt.hash(adminUser.password, 10);
     await dataSource.query(
       `INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, 'admin')`,
@@ -55,8 +53,8 @@ describe('Products catalog (e2e)', () => {
   });
 
   afterAll(async () => {
-    if (productId) {
-      await dataSource.query('DELETE FROM products WHERE id = $1', [productId]);
+    if (createdProductIds.length) {
+      await dataSource.query('DELETE FROM products WHERE id = ANY($1)', [createdProductIds]);
     }
     await dataSource.query('DELETE FROM users WHERE email = $1', [adminUser.email]);
 
@@ -76,15 +74,16 @@ describe('Products catalog (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: 'Remera Test E2E', description: 'Producto de prueba e2e', status: 'draft' })
+        .send({ name: `Remera Test E2E ${run}`, description: 'Producto de prueba e2e', status: 'draft' })
         .expect(201);
 
       expect(res.body.id).toBeDefined();
-      expect(res.body.name).toBe('Remera Test E2E');
-      expect(res.body.slug).toBe('remera-test-e2e');
+      expect(res.body.name).toBe(`Remera Test E2E ${run}`);
+      expect(res.body.slug).toBe(`remera-test-e2e-${run}`);
       expect(res.body.status).toBe('draft');
 
       productId = res.body.id;
+      createdProductIds.push(productId);
     });
 
     it('devuelve 401 sin token', () => {
@@ -95,30 +94,80 @@ describe('Products catalog (e2e)', () => {
     });
 
     it('devuelve 403 con token de usuario no-admin', async () => {
+      const regularEmail = `regular-e2e-${run}@example.com`;
+
       const registerRes = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ name: 'Regular User', email: 'regular-e2e@example.com', password: 'password123' });
+        .send({ name: 'Regular User', email: regularEmail, password: 'password123' });
 
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'regular-e2e@example.com', password: 'password123' });
-
-      const userToken = loginRes.body.access_token;
+        .send({ email: regularEmail, password: 'password123' });
 
       await request(app.getHttpServer())
         .post('/products')
-        .set('Authorization', `Bearer ${userToken}`)
+        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
         .send({ name: 'No permitido', status: 'draft' })
         .expect(403);
 
       await dataSource.query('DELETE FROM users WHERE id = $1', [registerRes.body.id]);
     });
 
-    it('devuelve 409 si el slug ya existe', () => {
+    it('devuelve 409 si el slug ya existe', async () => {
+      const { body: existing } = await request(app.getHttpServer())
+        .get(`/products/${productId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
       return request(app.getHttpServer())
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: 'Remera Test E2E', status: 'draft' })
+        .send({ name: 'Otro nombre', slug: existing.slug, status: 'draft' })
+        .expect(409);
+    });
+
+    it('crea el producto con variantes en una sola request', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: `Remera Con Variantes E2E ${run}`,
+          status: 'draft',
+          variants: [
+            { sku: `RCV-S-${run}`, price: 1500, stock: 10 },
+            { sku: `RCV-M-${run}`, price: 1500, stock: 5 },
+          ],
+        })
+        .expect(201);
+
+      expect(res.body.variants).toHaveLength(2);
+      expect(res.body.variants.map((v: { sku: string }) => v.sku)).toEqual(
+        expect.arrayContaining([`RCV-S-${run}`, `RCV-M-${run}`]),
+      );
+
+      createdProductIds.push(res.body.id);
+    });
+
+    it('devuelve 409 si alguna variante usa un SKU duplicado', async () => {
+      const base = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: `Producto SKU Base E2E ${run}`,
+          status: 'draft',
+          variants: [{ sku: `SKU-DUP-${run}`, price: 1000 }],
+        })
+        .expect(201);
+
+      createdProductIds.push(base.body.id);
+
+      await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: `Producto SKU Duplicado E2E ${run}`,
+          status: 'draft',
+          variants: [{ sku: `SKU-DUP-${run}`, price: 1500 }],
+        })
         .expect(409);
     });
   });

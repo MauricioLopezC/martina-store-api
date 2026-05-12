@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { ConflictError } from '../../common/errors/conflict.error';
 import { NotFoundError } from '../../common/errors/not-found.error';
 import { IStorageService, STORAGE_SERVICE } from '../../storage/storage.service.interface';
@@ -34,6 +34,7 @@ export class ProductsService {
     private readonly attrValuesRepo: Repository<AttributeValue>,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
+    private readonly dataSource: DataSource,
   ) {}
 
   private toSlug(name: string): string {
@@ -58,8 +59,40 @@ export class ProductsService {
     const categories = dto.categoryIds?.length
       ? await this.categoriesRepo.findBy({ id: In(dto.categoryIds) })
       : [];
-    const product = this.productsRepo.create({ ...dto, slug, categories });
-    return this.productsRepo.save(product);
+
+    const { variants: variantDtos, ...productFields } = dto;
+
+    if (!variantDtos?.length) {
+      const product = this.productsRepo.create({ ...productFields, slug, categories });
+      return this.productsRepo.save(product);
+    }
+
+    const skus = variantDtos.map((v) => v.sku);
+    const duplicateSku = await this.variantsRepo.findOneBy({ sku: In(skus) });
+    if (duplicateSku) throw new ConflictError(`SKU "${duplicateSku.sku}" is already in use`);
+
+    return this.dataSource.transaction(async (manager) => {
+      const product = manager.create(Product, { ...productFields, slug, categories });
+      await manager.save(product);
+
+      for (const variantDto of variantDtos) {
+        const { attributeValueIds, ...variantFields } = variantDto;
+        const attributeValues = attributeValueIds?.length
+          ? await this.attrValuesRepo.findBy({ id: In(attributeValueIds) })
+          : [];
+        const variant = manager.create(ProductVariant, {
+          ...variantFields,
+          productId: product.id,
+          attributeValues,
+        });
+        await manager.save(variant);
+      }
+
+      return manager.findOneOrFail(Product, {
+        where: { id: product.id },
+        relations: PRODUCT_RELATIONS,
+      });
+    });
   }
 
   findAllPublished(): Promise<Product[]> {

@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -8,8 +9,10 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { ProductStatus } from '../enums/product-status.enum';
+import { CreateVariantDto } from './create-variant.dto';
 
 export class CreateProductDto {
   @IsString()
@@ -44,4 +47,10 @@ export class CreateProductDto {
   @Min(1, { each: true })
   @IsOptional()
   categoryIds?: number[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVariantDto)
+  @IsOptional()
+  variants?: CreateVariantDto[];
 }
