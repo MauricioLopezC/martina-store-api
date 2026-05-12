@@ -1,6 +1,8 @@
 allowBuilds:
   '@nestjs/core': false
-  unrs-resolver: false
   bcrypt: true
+  unrs-resolver: false
 overrides:
+  fast-uri@<=3.1.0: '>=3.1.1'
+  fast-uri@<=3.1.1: '>=3.1.2'
   uuid: '9.0.1'

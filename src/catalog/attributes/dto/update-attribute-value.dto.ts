@@ -1,4 +1,6 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { CreateAttributeValueDto } from './create-attribute-value.dto';
 
-export class UpdateAttributeValueDto extends PartialType(CreateAttributeValueDto) {}
+export class UpdateAttributeValueDto extends PartialType(
+  CreateAttributeValueDto,
+) {}
