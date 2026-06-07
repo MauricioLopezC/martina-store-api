@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -21,6 +22,7 @@ import { CreateImageDto } from './dto/create-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
+import { ListAllProductsDto } from './dto/list-all-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateVariantDto } from './dto/update-variant.dto';
 import { ProductsService } from './products.service';
@@ -38,8 +40,8 @@ export class ProductsController {
 
   @Get()
   @Public()
-  findAll() {
-    return this.productsService.findAllPublished();
+  findAll(@Query() query: ListAllProductsDto) {
+    return this.productsService.findAllPublished(query);
   }
 
   @Get('slug/:slug')

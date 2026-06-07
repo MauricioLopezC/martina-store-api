@@ -8,6 +8,8 @@ import { AttributeValue } from '../attributes/entities/attribute-value.entity';
 import { Category } from '../categories/entities/category.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ListAllProductsDto } from './dto/list-all-products.dto';
+import { ProductSummaryDto } from './dto/product-summary.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -95,15 +97,61 @@ export class ProductsService {
     });
   }
 
-  findAllPublished(): Promise<Product[]> {
-    return this.productsRepo.find({
+  async findAllPublished(
+    dto: ListAllProductsDto,
+  ): Promise<{ data: ProductSummaryDto[]; total: number; page: number; limit: number }> {
+    const { page = 1, limit = 20 } = dto;
+
+    const [products, total] = await this.productsRepo.findAndCount({
       where: { status: ProductStatus.Published },
-      relations: PRODUCT_RELATIONS,
+      relations: ['images', 'categories'],
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    const ids = products.map((p) => p.id);
+    const minPriceRows: { productId: number; minPrice: string }[] = ids.length
+      ? await this.variantsRepo
+          .createQueryBuilder('v')
+          .select('v.productId', 'productId')
+          .addSelect('MIN(v.price)', 'minPrice')
+          .where('v.productId IN (:...ids)', { ids })
+          .andWhere('v.active = true')
+          .groupBy('v.productId')
+          .getRawMany()
+      : [];
+
+    const minPriceMap = new Map(
+      minPriceRows.map((r) => [r.productId, r.minPrice ? parseFloat(r.minPrice) : null]),
+    );
+
+    const data: ProductSummaryDto[] = products.map((p) => {
+      const cover = p.images.find((img) => img.isCover);
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        brand: p.brand ?? null,
+        status: p.status,
+        minPrice: minPriceMap.get(p.id) ?? null,
+        coverImage: cover ? { url: cover.url, altText: cover.altText } : null,
+        categories: p.categories.map((c) => ({ id: c.id, name: c.name })),
+      };
+    });
+
+    return { data, total, page, limit };
   }
 
-  findAll(): Promise<Product[]> {
-    return this.productsRepo.find({ relations: PRODUCT_RELATIONS });
+  async findAll(
+    dto: ListAllProductsDto,
+  ): Promise<{ data: Product[]; total: number; page: number; limit: number }> {
+    const { page = 1, limit = 20 } = dto;
+    const [data, total] = await this.productsRepo.findAndCount({
+      relations: PRODUCT_RELATIONS,
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit };
   }
 
   async findOne(id: number): Promise<Product> {
