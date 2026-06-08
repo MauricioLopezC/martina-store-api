@@ -3,6 +3,7 @@ import { Seeder } from 'typeorm-extension';
 
 import { Attribute } from '../../catalog/attributes/entities/attribute.entity';
 import { AttributeValue } from '../../catalog/attributes/entities/attribute-value.entity';
+import { Category } from '../../catalog/categories/entities/category.entity';
 import { Product } from '../../catalog/products/entities/product.entity';
 import { ProductVariant } from '../../catalog/products/entities/product-variant.entity';
 import { ProductStatus } from '../../catalog/products/enums/product-status.enum';
@@ -34,6 +35,7 @@ interface ProductData {
   price: number;
   talles: string[];
   colores: string[];
+  categoryNames: string[];
   tallesPool?: AttributeValue[];
 }
 
@@ -43,6 +45,7 @@ export default class ProductSeeder implements Seeder {
 
     const attributeRepo = dataSource.getRepository(Attribute);
     const attributeValueRepo = dataSource.getRepository(AttributeValue);
+    const categoryRepo = dataSource.getRepository(Category);
     const productRepo = dataSource.getRepository(Product);
     const variantRepo = dataSource.getRepository(ProductVariant);
 
@@ -86,6 +89,7 @@ export default class ProductSeeder implements Seeder {
         price: 18500,
         talles: ['XS', 'S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Blanco', 'Rojo', 'Azul'],
+        categoryNames: ['Remeras', 'Deportivo'],
       },
       {
         name: 'Remera M51',
@@ -95,6 +99,7 @@ export default class ProductSeeder implements Seeder {
         price: 12900,
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Blanco', 'Gris', 'Verde'],
+        categoryNames: ['Remeras'],
       },
       {
         name: 'Camisa de lino',
@@ -104,6 +109,7 @@ export default class ProductSeeder implements Seeder {
         price: 24900,
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Blanco', 'Beige', 'Celeste'],
+        categoryNames: ['Camisas', 'Hombre'],
       },
       {
         name: 'Top de mujer',
@@ -113,6 +119,7 @@ export default class ProductSeeder implements Seeder {
         price: 9900,
         talles: ['XS', 'S', 'M', 'L'],
         colores: ['Negro', 'Blanco', 'Rosa', 'Rojo'],
+        categoryNames: ['Tops', 'Mujer'],
       },
       {
         name: 'Campera unisex deportiva',
@@ -122,6 +129,7 @@ export default class ProductSeeder implements Seeder {
         price: 34900,
         talles: ['S', 'M', 'L', 'XL', 'XXL'],
         colores: ['Negro', 'Azul', 'Gris'],
+        categoryNames: ['Camperas y Buzos', 'Unisex', 'Deportivo'],
       },
       {
         name: 'Jean mujer Zara',
@@ -131,6 +139,7 @@ export default class ProductSeeder implements Seeder {
         price: 42000,
         talles: ['34', '36', '38', '40', '42', '44'],
         colores: ['Azul', 'Negro', 'Gris'],
+        categoryNames: ['Jeans', 'Mujer'],
         tallesPool: tallesJeanMujer,
       },
       {
@@ -141,6 +150,7 @@ export default class ProductSeeder implements Seeder {
         price: 42000,
         talles: ['28', '30', '32', '34', '36', '38'],
         colores: ['Azul', 'Negro', 'Gris'],
+        categoryNames: ['Jeans', 'Hombre'],
         tallesPool: tallesJeanHombre,
       },
       {
@@ -151,6 +161,7 @@ export default class ProductSeeder implements Seeder {
         price: 28500,
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Gris', 'Azul marino'],
+        categoryNames: ['Camperas y Buzos', 'Unisex'],
       },
       {
         name: 'Vestido floral de verano',
@@ -160,6 +171,7 @@ export default class ProductSeeder implements Seeder {
         price: 22900,
         talles: ['XS', 'S', 'M', 'L'],
         colores: ['Rosa', 'Blanco', 'Rojo'],
+        categoryNames: ['Vestidos', 'Mujer'],
       },
       {
         name: 'Bermuda cargo hombre',
@@ -169,6 +181,7 @@ export default class ProductSeeder implements Seeder {
         price: 19900,
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Beige', 'Negro', 'Verde'],
+        categoryNames: ['Bermudas', 'Hombre'],
       },
       {
         name: 'Calza deportiva mujer',
@@ -178,6 +191,7 @@ export default class ProductSeeder implements Seeder {
         price: 15900,
         talles: ['XS', 'S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Gris', 'Rosa', 'Azul'],
+        categoryNames: ['Calzas', 'Mujer', 'Deportivo'],
       },
       {
         name: 'Chaleco acolchado unisex',
@@ -187,6 +201,7 @@ export default class ProductSeeder implements Seeder {
         price: 52000,
         talles: ['S', 'M', 'L', 'XL', 'XXL'],
         colores: ['Negro', 'Azul marino', 'Verde'],
+        categoryNames: ['Chalecos', 'Unisex'],
       },
     ];
 
@@ -196,14 +211,29 @@ export default class ProductSeeder implements Seeder {
       const exists = await productRepo.findOneBy({ slug });
       if (exists) continue;
 
-      const product = productRepo.create({
-        name: data.name,
-        brand: data.brand,
-        description: data.description,
-        slug,
-        status: ProductStatus.Published,
-      });
-      await productRepo.save(product);
+      const categories = (
+        await Promise.all(
+          data.categoryNames.map((name) => categoryRepo.findOneBy({ name })),
+        )
+      ).filter((c): c is Category => c !== null);
+
+      const product = await productRepo.save(
+        productRepo.create({
+          name: data.name,
+          brand: data.brand,
+          description: data.description,
+          slug,
+          status: ProductStatus.Published,
+        }),
+      );
+
+      if (categories.length > 0) {
+        await dataSource
+          .createQueryBuilder()
+          .relation(Product, 'categories')
+          .of(product.id)
+          .add(categories.map((c) => c.id));
+      }
 
       const tallesPool = data.tallesPool ?? talles;
       const selectedTalles = tallesPool.filter((av) =>
