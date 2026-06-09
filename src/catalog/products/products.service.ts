@@ -103,6 +103,7 @@ export class ProductsService {
     const [products, total] = await this.productsRepo.findAndCount({
       where: { status: ProductStatus.Published },
       relations: ['images', 'categories'],
+      order: { id: 'ASC' },
       skip: (page - 1) * limit,
       take: limit,
     });
