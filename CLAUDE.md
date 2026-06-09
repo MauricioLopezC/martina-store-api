@@ -84,6 +84,13 @@ All extend `AppError` (abstract base). The `AppExceptionFilter` (`src/common/fil
 
 **Adding a new error type:** create a class extending `AppError` in `src/common/errors/`, then add an `instanceof` branch in `AppExceptionFilter`.
 
+## Swagger / OpenAPI
+
+The project uses the `@nestjs/swagger` CLI plugin (configured in `nest-cli.json`). This means:
+- **No `@ApiProperty()` needed** — the plugin infers it automatically from TypeScript types in DTO classes.
+- **No `@ApiResponse()` needed** — the plugin infers the response schema from the controller method's explicit return type.
+- To expose a response schema, declare the return type on the controller method (e.g., `findAll(): Promise<ProductSummaryPageDto>`) and ensure the DTO is a named class in a `.dto.ts` file.
+
 ## Testing
 
 - **Unit tests** live in `src/` next to the files they test (`*.spec.ts`). Jest config points `rootDir` to `src/`.
