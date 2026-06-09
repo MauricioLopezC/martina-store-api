@@ -18,3 +18,10 @@ export class ProductSummaryDto {
   coverImage: CoverImageDto | null;
   categories: CategorySummaryDto[];
 }
+
+export class ProductSummaryPageDto {
+  data: ProductSummaryDto[];
+  total: number;
+  page: number;
+  limit: number;
+}

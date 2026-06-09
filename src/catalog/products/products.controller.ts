@@ -23,6 +23,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { ListAllProductsDto } from './dto/list-all-products.dto';
+import { ProductSummaryPageDto } from './dto/product-summary.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateVariantDto } from './dto/update-variant.dto';
 import { ProductsService } from './products.service';
@@ -40,7 +41,7 @@ export class ProductsController {
 
   @Get()
   @Public()
-  findAll(@Query() query: ListAllProductsDto) {
+  findAll(@Query() query: ListAllProductsDto): Promise<ProductSummaryPageDto> {
     return this.productsService.findAllPublished(query);
   }
 

@@ -9,7 +9,7 @@ import { Category } from '../categories/entities/category.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListAllProductsDto } from './dto/list-all-products.dto';
-import { ProductSummaryDto } from './dto/product-summary.dto';
+import { ProductSummaryDto, ProductSummaryPageDto } from './dto/product-summary.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -97,9 +97,7 @@ export class ProductsService {
     });
   }
 
-  async findAllPublished(
-    dto: ListAllProductsDto,
-  ): Promise<{ data: ProductSummaryDto[]; total: number; page: number; limit: number }> {
+  async findAllPublished(dto: ListAllProductsDto): Promise<ProductSummaryPageDto> {
     const { page = 1, limit = 20 } = dto;
 
     const [products, total] = await this.productsRepo.findAndCount({
