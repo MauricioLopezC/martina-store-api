@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseFilePipeBuilder,
   Patch,
   Post,
   Query,
@@ -90,7 +91,10 @@ export class ProductsController {
   @Delete(':id/variants/:variantId')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeVariant(@Param('id') id: string, @Param('variantId') variantId: string) {
+  removeVariant(
+    @Param('id') id: string,
+    @Param('variantId') variantId: string,
+  ) {
     return this.productsService.removeVariant(+id, +variantId);
   }
 
@@ -101,7 +105,19 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('file'))
   createImage(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: 'image/jpeg',
+        })
+        .addMaxSizeValidator({
+          maxSize: 1024 * 1024 * 5,
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    file: Express.Multer.File,
     @Body() dto: CreateImageDto,
   ) {
     return this.productsService.createImage(+id, file, dto);

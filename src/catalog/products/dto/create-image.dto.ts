@@ -2,7 +2,7 @@ import { Transform } from 'class-transformer';
 import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateImageDto {
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
   @IsInt()
   @Min(0)
   @IsOptional()

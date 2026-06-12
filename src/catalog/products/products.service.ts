@@ -3,13 +3,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { ConflictError } from '../../common/errors/conflict.error';
 import { NotFoundError } from '../../common/errors/not-found.error';
-import { IStorageService, STORAGE_SERVICE } from '../../storage/storage.service.interface';
+import {
+  IStorageService,
+  STORAGE_SERVICE,
+} from '../../storage/storage.service.interface';
 import { AttributeValue } from '../attributes/entities/attribute-value.entity';
 import { Category } from '../categories/entities/category.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListAllProductsDto } from './dto/list-all-products.dto';
-import { ProductSummaryDto, ProductSummaryPageDto } from './dto/product-summary.dto';
+import {
+  ProductSummaryDto,
+  ProductSummaryPageDto,
+} from './dto/product-summary.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -19,7 +25,12 @@ import { ProductVariant } from './entities/product-variant.entity';
 import { Product } from './entities/product.entity';
 import { ProductStatus } from './enums/product-status.enum';
 
-const PRODUCT_RELATIONS = ['variants', 'variants.attributeValues', 'images', 'categories'];
+const PRODUCT_RELATIONS = [
+  'variants',
+  'variants.attributeValues',
+  'images',
+  'categories',
+];
 
 @Injectable()
 export class ProductsService {
@@ -52,7 +63,8 @@ export class ProductsService {
   private async resolveSlug(name: string, slug?: string): Promise<string> {
     const candidate = slug ?? this.toSlug(name);
     const existing = await this.productsRepo.findOneBy({ slug: candidate });
-    if (existing) throw new ConflictError(`Slug "${candidate}" is already in use`);
+    if (existing)
+      throw new ConflictError(`Slug "${candidate}" is already in use`);
     return candidate;
   }
 
@@ -65,16 +77,25 @@ export class ProductsService {
     const { variants: variantDtos, ...productFields } = dto;
 
     if (!variantDtos?.length) {
-      const product = this.productsRepo.create({ ...productFields, slug, categories });
+      const product = this.productsRepo.create({
+        ...productFields,
+        slug,
+        categories,
+      });
       return this.productsRepo.save(product);
     }
 
     const skus = variantDtos.map((v) => v.sku);
     const duplicateSku = await this.variantsRepo.findOneBy({ sku: In(skus) });
-    if (duplicateSku) throw new ConflictError(`SKU "${duplicateSku.sku}" is already in use`);
+    if (duplicateSku)
+      throw new ConflictError(`SKU "${duplicateSku.sku}" is already in use`);
 
     return this.dataSource.transaction(async (manager) => {
-      const product = manager.create(Product, { ...productFields, slug, categories });
+      const product = manager.create(Product, {
+        ...productFields,
+        slug,
+        categories,
+      });
       await manager.save(product);
 
       for (const variantDto of variantDtos) {
@@ -97,7 +118,9 @@ export class ProductsService {
     });
   }
 
-  async findAllPublished(dto: ListAllProductsDto): Promise<ProductSummaryPageDto> {
+  async findAllPublished(
+    dto: ListAllProductsDto,
+  ): Promise<ProductSummaryPageDto> {
     const { page = 1, limit = 20 } = dto;
 
     const [products, total] = await this.productsRepo.findAndCount({
@@ -121,7 +144,10 @@ export class ProductsService {
       : [];
 
     const minPriceMap = new Map(
-      minPriceRows.map((r) => [r.productId, r.minPrice ? parseFloat(r.minPrice) : null]),
+      minPriceRows.map((r) => [
+        r.productId,
+        r.minPrice ? parseFloat(r.minPrice) : null,
+      ]),
     );
 
     const data: ProductSummaryDto[] = products.map((p) => {
@@ -175,7 +201,8 @@ export class ProductsService {
     const product = await this.findOne(id);
     if (dto.slug && dto.slug !== product.slug) {
       const existing = await this.productsRepo.findOneBy({ slug: dto.slug });
-      if (existing) throw new ConflictError(`Slug "${dto.slug}" is already in use`);
+      if (existing)
+        throw new ConflictError(`Slug "${dto.slug}" is already in use`);
     }
     if (dto.categoryIds !== undefined) {
       product.categories = dto.categoryIds.length
@@ -194,14 +221,22 @@ export class ProductsService {
 
   // Variants
 
-  async createVariant(productId: number, dto: CreateVariantDto): Promise<ProductVariant> {
+  async createVariant(
+    productId: number,
+    dto: CreateVariantDto,
+  ): Promise<ProductVariant> {
     await this.findOne(productId);
     const skuExists = await this.variantsRepo.findOneBy({ sku: dto.sku });
-    if (skuExists) throw new ConflictError(`SKU "${dto.sku}" is already in use`);
+    if (skuExists)
+      throw new ConflictError(`SKU "${dto.sku}" is already in use`);
     const attributeValues = dto.attributeValueIds?.length
       ? await this.attrValuesRepo.findBy({ id: In(dto.attributeValueIds) })
       : [];
-    const variant = this.variantsRepo.create({ ...dto, productId, attributeValues });
+    const variant = this.variantsRepo.create({
+      ...dto,
+      productId,
+      attributeValues,
+    });
     return this.variantsRepo.save(variant);
   }
 
@@ -217,7 +252,8 @@ export class ProductsService {
     if (!variant) throw new NotFoundError(`Variant #${variantId} not found`);
     if (dto.sku && dto.sku !== variant.sku) {
       const skuExists = await this.variantsRepo.findOneBy({ sku: dto.sku });
-      if (skuExists) throw new ConflictError(`SKU "${dto.sku}" is already in use`);
+      if (skuExists)
+        throw new ConflictError(`SKU "${dto.sku}" is already in use`);
     }
     if (dto.attributeValueIds !== undefined) {
       variant.attributeValues = dto.attributeValueIds.length
@@ -230,7 +266,10 @@ export class ProductsService {
   }
 
   async removeVariant(productId: number, variantId: number): Promise<void> {
-    const variant = await this.variantsRepo.findOneBy({ id: variantId, productId });
+    const variant = await this.variantsRepo.findOneBy({
+      id: variantId,
+      productId,
+    });
     if (!variant) throw new NotFoundError(`Variant #${variantId} not found`);
     await this.variantsRepo.remove(variant);
   }
@@ -243,6 +282,9 @@ export class ProductsService {
     dto: CreateImageDto,
   ): Promise<ProductImage> {
     await this.findOne(productId);
+    console.log(productId);
+    console.log(file);
+    console.log(dto);
     const url = await this.storageService.upload(file);
     const image = this.imagesRepo.create({ ...dto, productId, url });
     return this.imagesRepo.save(image);
