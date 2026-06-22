@@ -22,6 +22,7 @@ import { Role } from '../../users/role.enum';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
+import { ProductDetailDto } from './dto/product-detail.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { ListAllProductsDto } from './dto/list-all-products.dto';
 import { ProductSummaryPageDto } from './dto/product-summary.dto';
@@ -53,7 +54,7 @@ export class ProductsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<ProductDetailDto> {
     return this.productsService.findOne(+id);
   }
 

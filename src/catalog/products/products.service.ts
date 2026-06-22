@@ -11,6 +11,7 @@ import { AttributeValue } from '../attributes/entities/attribute-value.entity';
 import { Category } from '../categories/entities/category.entity';
 import { CreateImageDto } from './dto/create-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ProductDetailDto } from './dto/product-detail.dto';
 import { ListAllProductsDto } from './dto/list-all-products.dto';
 import {
   ProductSummaryDto,
@@ -28,6 +29,7 @@ import { ProductStatus } from './enums/product-status.enum';
 const PRODUCT_RELATIONS = [
   'variants',
   'variants.attributeValues',
+  'variants.attributeValues.attribute',
   'images',
   'categories',
 ];
@@ -179,13 +181,49 @@ export class ProductsService {
     return { data, total, page, limit };
   }
 
-  async findOne(id: number): Promise<Product> {
+  private async findOneEntity(id: number): Promise<Product> {
     const product = await this.productsRepo.findOne({
       where: { id },
       relations: PRODUCT_RELATIONS,
     });
     if (!product) throw new NotFoundError(`Product #${id} not found`);
     return product;
+  }
+
+  async findOne(id: number): Promise<ProductDetailDto> {
+    const product = await this.findOneEntity(id);
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      active: product.active,
+      slug: product.slug,
+      brand: product.brand,
+      status: product.status,
+      variants: product.variants.map((v) => ({
+        id: v.id,
+        productId: v.productId,
+        sku: v.sku,
+        price: String(v.price),
+        stock: v.stock,
+        active: v.active,
+        attributeValues: v.attributeValues.map((av) => ({
+          id: av.id,
+          attributeId: av.attributeId,
+          value: av.value,
+          attribute: { id: av.attribute.id, name: av.attribute.name },
+        })),
+      })),
+      images: product.images.map((img) => ({
+        id: img.id,
+        productId: img.productId,
+        url: img.url,
+        position: img.position,
+        isCover: img.isCover,
+        altText: img.altText,
+      })),
+      categories: product.categories.map((c) => ({ id: c.id, name: c.name })),
+    };
   }
 
   async findBySlug(slug: string): Promise<Product> {
@@ -198,7 +236,7 @@ export class ProductsService {
   }
 
   async update(id: number, dto: UpdateProductDto): Promise<Product> {
-    const product = await this.findOne(id);
+    const product = await this.findOneEntity(id);
     if (dto.slug && dto.slug !== product.slug) {
       const existing = await this.productsRepo.findOneBy({ slug: dto.slug });
       if (existing)
@@ -215,7 +253,7 @@ export class ProductsService {
   }
 
   async remove(id: number): Promise<void> {
-    const product = await this.findOne(id);
+    const product = await this.findOneEntity(id);
     await this.productsRepo.remove(product);
   }
 
@@ -225,7 +263,7 @@ export class ProductsService {
     productId: number,
     dto: CreateVariantDto,
   ): Promise<ProductVariant> {
-    await this.findOne(productId);
+    await this.findOneEntity(productId);
     const skuExists = await this.variantsRepo.findOneBy({ sku: dto.sku });
     if (skuExists)
       throw new ConflictError(`SKU "${dto.sku}" is already in use`);
@@ -281,7 +319,7 @@ export class ProductsService {
     file: Express.Multer.File,
     dto: CreateImageDto,
   ): Promise<ProductImage> {
-    await this.findOne(productId);
+    await this.findOneEntity(productId);
     console.log(productId);
     console.log(file);
     console.log(dto);
