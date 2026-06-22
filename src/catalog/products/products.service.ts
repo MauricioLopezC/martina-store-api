@@ -181,17 +181,20 @@ export class ProductsService {
     return { data, total, page, limit };
   }
 
-  private async findOneEntity(id: number): Promise<Product> {
+  private async findOneEntity(
+    id: number,
+    relations: string[] = [],
+  ): Promise<Product> {
     const product = await this.productsRepo.findOne({
       where: { id },
-      relations: PRODUCT_RELATIONS,
+      relations,
     });
     if (!product) throw new NotFoundError(`Product #${id} not found`);
     return product;
   }
 
   async findOne(id: number): Promise<ProductDetailDto> {
-    const product = await this.findOneEntity(id);
+    const product = await this.findOneEntity(id, PRODUCT_RELATIONS);
     return {
       id: product.id,
       name: product.name,
@@ -236,7 +239,7 @@ export class ProductsService {
   }
 
   async update(id: number, dto: UpdateProductDto): Promise<Product> {
-    const product = await this.findOneEntity(id);
+    const product = await this.findOneEntity(id, ['categories']);
     if (dto.slug && dto.slug !== product.slug) {
       const existing = await this.productsRepo.findOneBy({ slug: dto.slug });
       if (existing)
