@@ -14,7 +14,7 @@ pnpm start:prod       # run compiled output
 pnpm test             # unit tests (jest, rootDir: src/)
 pnpm test:watch       # watch mode
 pnpm test:cov         # coverage report
-pnpm test:e2e         # e2e tests against real DB (--runInBand --forceExit)
+pnpm test:e2e         # e2e tests against a dedicated test DB (--runInBand --forceExit)
 
 # Run a single test file
 pnpm test -- src/users/users.service.spec.ts
@@ -42,6 +42,8 @@ Copy `.env.example` to `.env`. Required variables:
 | `JWT_EXPIRES_IN` | `1h` |
 
 TypeORM runs with `synchronize: true` — schema is auto-synced from entities in dev.
+
+E2e tests use a separate `.env.test` (copy `.env.example` to `.env.test`, same credentials but a different `DB_NAME`, e.g. `martina-store-nest-test`) so they never touch the dev database. `ConfigModule` in `src/app.module.ts` loads `.env.test` instead of `.env` when `NODE_ENV=test`, which `pnpm test:e2e` sets automatically. Create the test database once with `pnpm db:create:test` (drop it with `pnpm db:drop:test`).
 
 ## Architecture
 
@@ -94,4 +96,4 @@ The project uses the `@nestjs/swagger` CLI plugin (configured in `nest-cli.json`
 ## Testing
 
 - **Unit tests** live in `src/` next to the files they test (`*.spec.ts`). Jest config points `rootDir` to `src/`.
-- **E2e tests** live in `test/` and use `jest-e2e.json`. They boot the full `AppModule` against a real database and clean up after themselves with raw SQL in `afterAll`.
+- **E2e tests** live in `test/` and use `jest-e2e.json`. They boot the full `AppModule` against the dedicated test database (see Environment section) and clean up after themselves with raw SQL in `afterAll`.

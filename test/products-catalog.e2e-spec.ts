@@ -10,6 +10,11 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { AppExceptionFilter } from '../src/common/filters/app-exception.filter';
 
+const fakeJpegBuffer = Buffer.concat([
+  Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+  Buffer.from('fake-image-content'),
+]);
+
 describe('Products catalog (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -181,7 +186,7 @@ describe('Products catalog (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post(`/products/${productId}/images`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .attach('file', Buffer.from('fake-image-content'), {
+        .attach('file', fakeJpegBuffer, {
           filename: 'remera-azul.jpg',
           contentType: 'image/jpeg',
         })
@@ -215,7 +220,7 @@ describe('Products catalog (e2e)', () => {
       return request(app.getHttpServer())
         .post('/products/99999/images')
         .set('Authorization', `Bearer ${adminToken}`)
-        .attach('file', Buffer.from('x'), { filename: 'x.jpg', contentType: 'image/jpeg' })
+        .attach('file', fakeJpegBuffer, { filename: 'x.jpg', contentType: 'image/jpeg' })
         .expect(404);
     });
 

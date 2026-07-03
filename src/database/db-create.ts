@@ -1,7 +1,4 @@
 import 'reflect-metadata';
-import * as dotenv from 'dotenv';
-dotenv.config();
-
 import { createDatabase } from 'typeorm-extension';
 import { dataSource } from './data-source';
 
