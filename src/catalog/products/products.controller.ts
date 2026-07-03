@@ -54,6 +54,7 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string): Promise<ProductDetailDto> {
     return this.productsService.findOne(+id);
   }
