@@ -4,6 +4,7 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { MeDto } from './dto/me.dto';
 import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
@@ -24,7 +25,7 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@Request() req) {
+  me(@Request() req): MeDto {
     return req.user;
   }
 }
