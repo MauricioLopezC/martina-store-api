@@ -16,6 +16,7 @@ describe('Products catalog (e2e)', () => {
   let adminToken: string;
   let productId: number;
   const createdProductIds: number[] = [];
+  const createdCategoryIds: number[] = [];
   const uploadedFiles: string[] = [];
 
   const run = Date.now().toString(36);
@@ -55,6 +56,9 @@ describe('Products catalog (e2e)', () => {
   afterAll(async () => {
     if (createdProductIds.length) {
       await dataSource.query('DELETE FROM products WHERE id = ANY($1)', [createdProductIds]);
+    }
+    if (createdCategoryIds.length) {
+      await dataSource.query('DELETE FROM categories WHERE id = ANY($1)', [createdCategoryIds]);
     }
     await dataSource.query('DELETE FROM users WHERE email = $1', [adminUser.email]);
 
@@ -220,6 +224,91 @@ describe('Products catalog (e2e)', () => {
         .post(`/products/${productId}/images`)
         .attach('file', Buffer.from('x'), { filename: 'x.jpg', contentType: 'image/jpeg' })
         .expect(401);
+    });
+  });
+
+  describe('GET /products?categoryId= — filtra productos por categoría', () => {
+    let categoryId: number;
+    let otherCategoryId: number;
+    let inCategoryIds: number[];
+    let outsideProductId: number;
+
+    beforeAll(async () => {
+      const categoryRes = await request(app.getHttpServer())
+        .post('/categories')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Categoria Filtro E2E ${run}` })
+        .expect(201);
+      categoryId = categoryRes.body.id;
+      createdCategoryIds.push(categoryId);
+
+      const otherCategoryRes = await request(app.getHttpServer())
+        .post('/categories')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Categoria Otra E2E ${run}` })
+        .expect(201);
+      otherCategoryId = otherCategoryRes.body.id;
+      createdCategoryIds.push(otherCategoryId);
+
+      const inCategory = await Promise.all(
+        [1, 2, 3].map((n) =>
+          request(app.getHttpServer())
+            .post('/products')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({
+              name: `Producto Filtro ${n} E2E ${run}`,
+              status: 'published',
+              categoryIds: [categoryId, otherCategoryId],
+            })
+            .expect(201),
+        ),
+      );
+      inCategoryIds = inCategory.map((res) => res.body.id);
+      createdProductIds.push(...inCategoryIds);
+
+      const outside = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: `Producto Sin Categoria E2E ${run}`,
+          status: 'published',
+          categoryIds: [otherCategoryId],
+        })
+        .expect(201);
+      outsideProductId = outside.body.id;
+      createdProductIds.push(outsideProductId);
+    });
+
+    it('devuelve solo los productos asociados a la categoría, con todas sus categorías', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/products?categoryId=${categoryId}&limit=100`)
+        .expect(200);
+
+      expect(res.body.total).toBe(inCategoryIds.length);
+      const returnedIds = res.body.data.map((p: { id: number }) => p.id);
+      expect(returnedIds.sort()).toEqual([...inCategoryIds].sort());
+      expect(returnedIds).not.toContain(outsideProductId);
+
+      for (const product of res.body.data) {
+        const categoryIds = product.categories.map((c: { id: number }) => c.id);
+        expect(categoryIds).toEqual(expect.arrayContaining([categoryId, otherCategoryId]));
+      }
+    });
+
+    it('combina el filtro con la paginación', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/products?categoryId=${categoryId}&page=1&limit=2`)
+        .expect(200);
+
+      expect(res.body.total).toBe(inCategoryIds.length);
+      expect(res.body.data).toHaveLength(2);
+    });
+
+    it('devuelve data vacía y total 0 para una categoría inexistente', async () => {
+      const res = await request(app.getHttpServer()).get('/products?categoryId=999999').expect(200);
+
+      expect(res.body.data).toEqual([]);
+      expect(res.body.total).toBe(0);
     });
   });
 });

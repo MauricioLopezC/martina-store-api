@@ -123,15 +123,54 @@ export class ProductsService {
   async findAllPublished(
     dto: ListAllProductsDto,
   ): Promise<ProductSummaryPageDto> {
-    const { page = 1, limit = 20 } = dto;
+    const { page = 1, limit = 20, categoryId } = dto;
 
-    const [products, total] = await this.productsRepo.findAndCount({
-      where: { status: ProductStatus.Published },
-      relations: ['images', 'categories'],
-      order: { id: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    let products: Product[];
+    let total: number;
+
+    if (categoryId) {
+      // Exact category match only; does not include subcategories
+      // (Category has parentId/children) — a possible future extension,
+      // out of scope for now.
+      const baseQuery = () =>
+        this.productsRepo
+          .createQueryBuilder('p')
+          .innerJoin('p.categories', 'c', 'c.id = :categoryId', {
+            categoryId,
+          })
+          .where('p.status = :status', { status: ProductStatus.Published });
+
+      const idRows = await baseQuery()
+        .select('p.id', 'id')
+        .orderBy('p.id', 'ASC')
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .getRawMany<{ id: number }>();
+
+      const pagedIds = idRows.map((r) => r.id);
+      total = await baseQuery().getCount();
+
+      const rows = pagedIds.length
+        ? await this.productsRepo.find({
+            where: { id: In(pagedIds) },
+            relations: ['images', 'categories'],
+          })
+        : [];
+      const byId = new Map(rows.map((p) => [p.id, p]));
+      products = pagedIds
+        .map((id) => byId.get(id))
+        .filter((p): p is Product => !!p);
+    } else {
+      const [rows, count] = await this.productsRepo.findAndCount({
+        where: { status: ProductStatus.Published },
+        relations: ['images', 'categories'],
+        order: { id: 'ASC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      products = rows;
+      total = count;
+    }
 
     const ids = products.map((p) => p.id);
     const minPriceRows: { productId: number; minPrice: string }[] = ids.length
