@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -36,43 +37,52 @@ export class AttributesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.attributesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.attributesService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(Role.Admin)
-  update(@Param('id') id: string, @Body() dto: UpdateAttributeDto) {
-    return this.attributesService.update(+id, dto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateAttributeDto,
+  ) {
+    return this.attributesService.update(id, dto);
   }
 
   @Delete(':id')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.attributesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.attributesService.remove(id);
   }
 
   @Post(':id/values')
   @Roles(Role.Admin)
-  createValue(@Param('id') id: string, @Body() dto: CreateAttributeValueDto) {
-    return this.attributesService.createValue(+id, dto);
+  createValue(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateAttributeValueDto,
+  ) {
+    return this.attributesService.createValue(id, dto);
   }
 
   @Patch(':id/values/:valueId')
   @Roles(Role.Admin)
   updateValue(
-    @Param('id') id: string,
-    @Param('valueId') valueId: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('valueId', ParseIntPipe) valueId: number,
     @Body() dto: UpdateAttributeValueDto,
   ) {
-    return this.attributesService.updateValue(+id, +valueId, dto);
+    return this.attributesService.updateValue(id, valueId, dto);
   }
 
   @Delete(':id/values/:valueId')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeValue(@Param('id') id: string, @Param('valueId') valueId: string) {
-    return this.attributesService.removeValue(+id, +valueId);
+  removeValue(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('valueId', ParseIntPipe) valueId: number,
+  ) {
+    return this.attributesService.removeValue(id, valueId);
   }
 }

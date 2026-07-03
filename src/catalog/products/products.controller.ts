@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseFilePipeBuilder,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -55,49 +56,52 @@ export class ProductsController {
 
   @Get(':id')
   @Public()
-  findOne(@Param('id') id: string): Promise<ProductDetailDto> {
-    return this.productsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<ProductDetailDto> {
+    return this.productsService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(Role.Admin)
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.productsService.update(+id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
+    return this.productsService.update(id, dto);
   }
 
   @Delete(':id')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.productsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.remove(id);
   }
 
   // Variants
 
   @Post(':id/variants')
   @Roles(Role.Admin)
-  createVariant(@Param('id') id: string, @Body() dto: CreateVariantDto) {
-    return this.productsService.createVariant(+id, dto);
+  createVariant(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateVariantDto,
+  ) {
+    return this.productsService.createVariant(id, dto);
   }
 
   @Patch(':id/variants/:variantId')
   @Roles(Role.Admin)
   updateVariant(
-    @Param('id') id: string,
-    @Param('variantId') variantId: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('variantId', ParseIntPipe) variantId: number,
     @Body() dto: UpdateVariantDto,
   ) {
-    return this.productsService.updateVariant(+id, +variantId, dto);
+    return this.productsService.updateVariant(id, variantId, dto);
   }
 
   @Delete(':id/variants/:variantId')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
   removeVariant(
-    @Param('id') id: string,
-    @Param('variantId') variantId: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('variantId', ParseIntPipe) variantId: number,
   ) {
-    return this.productsService.removeVariant(+id, +variantId);
+    return this.productsService.removeVariant(id, variantId);
   }
 
   // Images
@@ -106,7 +110,7 @@ export class ProductsController {
   @Roles(Role.Admin)
   @UseInterceptors(FileInterceptor('file'))
   createImage(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
@@ -122,23 +126,26 @@ export class ProductsController {
     file: Express.Multer.File,
     @Body() dto: CreateImageDto,
   ) {
-    return this.productsService.createImage(+id, file, dto);
+    return this.productsService.createImage(id, file, dto);
   }
 
   @Patch(':id/images/:imageId')
   @Roles(Role.Admin)
   updateImage(
-    @Param('id') id: string,
-    @Param('imageId') imageId: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('imageId', ParseIntPipe) imageId: number,
     @Body() dto: UpdateImageDto,
   ) {
-    return this.productsService.updateImage(+id, +imageId, dto);
+    return this.productsService.updateImage(id, imageId, dto);
   }
 
   @Delete(':id/images/:imageId')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeImage(@Param('id') id: string, @Param('imageId') imageId: string) {
-    return this.productsService.removeImage(+id, +imageId);
+  removeImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('imageId', ParseIntPipe) imageId: number,
+  ) {
+    return this.productsService.removeImage(id, imageId);
   }
 }

@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -36,20 +37,23 @@ export class CategoriesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.categoriesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.findOne(id);
   }
 
   @Patch(':id')
   @Roles(Role.Admin)
-  update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
-    return this.categoriesService.update(+id, dto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.categoriesService.update(id, dto);
   }
 
   @Delete(':id')
   @Roles(Role.Admin)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.categoriesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.remove(id);
   }
 }
