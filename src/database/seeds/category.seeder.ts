@@ -3,6 +3,7 @@ import { IsNull } from 'typeorm';
 import { Seeder } from 'typeorm-extension';
 
 import { Category } from '../../catalog/categories/entities/category.entity';
+import { toSlug } from '../../common/utils/slug.util';
 
 export default class CategorySeeder implements Seeder {
   async run(dataSource: DataSource): Promise<void> {
@@ -16,24 +17,25 @@ export default class CategorySeeder implements Seeder {
         ? await repo.findOneBy({ name, parentId: parent.id })
         : await repo.findOneBy({ name, parentId: IsNull() });
       if (found) return found;
-      return repo.save(repo.create({ name, parent, active: true }));
+      const slug = toSlug(name);
+      return repo.save(repo.create({ name, slug, parent, active: true }));
     };
 
     // Categorías raíz
-    const mujer     = await upsert('Mujer');
-    const hombre    = await upsert('Hombre');
-    const unisex    = await upsert('Unisex');
+    const mujer = await upsert('Mujer');
+    const hombre = await upsert('Hombre');
+    const unisex = await upsert('Unisex');
     const deportivo = await upsert('Deportivo');
 
     // Subcategorías
-    await upsert('Remeras',          unisex);
-    await upsert('Jeans',            null);
+    await upsert('Remeras', unisex);
+    await upsert('Jeans', null);
     await upsert('Camperas y Buzos', unisex);
-    await upsert('Vestidos',         mujer);
-    await upsert('Tops',             mujer);
-    await upsert('Camisas',          hombre);
-    await upsert('Bermudas',         hombre);
-    await upsert('Calzas',           mujer);
-    await upsert('Chalecos',         unisex);
+    await upsert('Vestidos', mujer);
+    await upsert('Tops', mujer);
+    await upsert('Camisas', hombre);
+    await upsert('Bermudas', hombre);
+    await upsert('Calzas', mujer);
+    await upsert('Chalecos', unisex);
   }
 }

@@ -14,7 +14,10 @@ export class Category {
   @Column({ type: 'int', nullable: true })
   parentId: number | null;
 
-  @ManyToOne(() => Category, (c) => c.children, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Category, (c) => c.children, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   parent: Category | null;
 
   @OneToMany(() => Category, (c) => c.parent)
@@ -22,6 +25,9 @@ export class Category {
 
   @Column()
   name: string;
+
+  @Column({ unique: true })
+  slug: string;
 
   @Column({ type: 'text', nullable: true })
   description: string | null;

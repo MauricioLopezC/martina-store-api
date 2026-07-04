@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { ConflictError } from '../../common/errors/conflict.error';
 import { NotFoundError } from '../../common/errors/not-found.error';
+import { toSlug } from '../../common/utils/slug.util';
 import {
   IStorageService,
   STORAGE_SERVICE,
@@ -53,18 +54,8 @@ export class ProductsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  private toSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-  }
-
   private async resolveSlug(name: string, slug?: string): Promise<string> {
-    const candidate = slug ?? this.toSlug(name);
+    const candidate = slug ?? toSlug(name);
     const existing = await this.productsRepo.findOneBy({ slug: candidate });
     if (existing)
       throw new ConflictError(`Slug "${candidate}" is already in use`);
