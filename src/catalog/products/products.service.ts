@@ -18,6 +18,7 @@ import {
   ProductSummaryPageDto,
 } from './dto/product-summary.dto';
 import { CreateVariantDto } from './dto/create-variant.dto';
+import { ListAllProductsAdminDto } from './dto/list-all-products-admin.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateVariantDto } from './dto/update-variant.dto';
@@ -123,6 +124,19 @@ export class ProductsService {
   async findAllPublished(
     dto: ListAllProductsDto,
   ): Promise<ProductSummaryPageDto> {
+    return this.listProducts(dto, ProductStatus.Published);
+  }
+
+  async findAllForAdmin(
+    dto: ListAllProductsAdminDto,
+  ): Promise<ProductSummaryPageDto> {
+    return this.listProducts(dto, dto.status);
+  }
+
+  private async listProducts(
+    dto: ListAllProductsDto,
+    status?: ProductStatus,
+  ): Promise<ProductSummaryPageDto> {
     const { page = 1, limit = 20, categoryId } = dto;
 
     let products: Product[];
@@ -132,13 +146,14 @@ export class ProductsService {
       // Exact category match only; does not include subcategories
       // (Category has parentId/children) — a possible future extension,
       // out of scope for now.
-      const baseQuery = () =>
-        this.productsRepo
+      const baseQuery = () => {
+        const qb = this.productsRepo
           .createQueryBuilder('p')
           .innerJoin('p.categories', 'c', 'c.id = :categoryId', {
             categoryId,
-          })
-          .where('p.status = :status', { status: ProductStatus.Published });
+          });
+        return status ? qb.where('p.status = :status', { status }) : qb;
+      };
 
       const idRows = await baseQuery()
         .select('p.id', 'id')
@@ -162,7 +177,7 @@ export class ProductsService {
         .filter((p): p is Product => !!p);
     } else {
       const [rows, count] = await this.productsRepo.findAndCount({
-        where: { status: ProductStatus.Published },
+        where: status ? { status } : {},
         relations: ['images', 'categories'],
         order: { id: 'ASC' },
         skip: (page - 1) * limit,
@@ -205,18 +220,6 @@ export class ProductsService {
       };
     });
 
-    return { data, total, page, limit };
-  }
-
-  async findAll(
-    dto: ListAllProductsDto,
-  ): Promise<{ data: Product[]; total: number; page: number; limit: number }> {
-    const { page = 1, limit = 20 } = dto;
-    const [data, total] = await this.productsRepo.findAndCount({
-      relations: PRODUCT_RELATIONS,
-      skip: (page - 1) * limit,
-      take: limit,
-    });
     return { data, total, page, limit };
   }
 

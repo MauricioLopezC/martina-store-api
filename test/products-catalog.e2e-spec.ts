@@ -316,4 +316,86 @@ describe('Products catalog (e2e)', () => {
       expect(res.body.total).toBe(0);
     });
   });
+
+  describe('GET /products/admin — listado con filtro por status para admins', () => {
+    let draftProductId: number;
+    let archivedProductId: number;
+    let publishedProductId: number;
+
+    beforeAll(async () => {
+      const draftRes = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Draft Admin E2E ${run}`, status: 'draft' })
+        .expect(201);
+      draftProductId = draftRes.body.id;
+      createdProductIds.push(draftProductId);
+
+      const archivedRes = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Archived Admin E2E ${run}`, status: 'archived' })
+        .expect(201);
+      archivedProductId = archivedRes.body.id;
+      createdProductIds.push(archivedProductId);
+
+      const publishedRes = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Published Admin E2E ${run}`, status: 'published' })
+        .expect(201);
+      publishedProductId = publishedRes.body.id;
+      createdProductIds.push(publishedProductId);
+    });
+
+    it('devuelve 401 sin token', () => {
+      return request(app.getHttpServer()).get('/products/admin').expect(401);
+    });
+
+    it('devuelve 403 con token de usuario no-admin', async () => {
+      const regularEmail = `regular-admin-list-e2e-${run}@example.com`;
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ name: 'Regular User', email: regularEmail, password: 'password123' });
+
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: regularEmail, password: 'password123' });
+
+      await request(app.getHttpServer())
+        .get('/products/admin')
+        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .expect(403);
+
+      await dataSource.query('DELETE FROM users WHERE id = $1', [registerRes.body.id]);
+    });
+
+    it('sin status, un admin ve productos en cualquier estado', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/products/admin?limit=100')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const returnedIds = res.body.data.map((p: { id: number }) => p.id);
+      expect(returnedIds).toEqual(
+        expect.arrayContaining([draftProductId, archivedProductId, publishedProductId]),
+      );
+    });
+
+    it('con status=draft, solo devuelve productos en borrador', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/products/admin?status=draft&limit=100')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const returnedIds = res.body.data.map((p: { id: number }) => p.id);
+      expect(returnedIds).toContain(draftProductId);
+      expect(returnedIds).not.toContain(archivedProductId);
+      expect(returnedIds).not.toContain(publishedProductId);
+      for (const product of res.body.data) {
+        expect(product.status).toBe('draft');
+      }
+    });
+  });
 });

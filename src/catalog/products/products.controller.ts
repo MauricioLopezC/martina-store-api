@@ -27,6 +27,7 @@ import { CreateVariantDto } from './dto/create-variant.dto';
 import { ProductDetailDto } from './dto/product-detail.dto';
 import { UpdateImageDto } from './dto/update-image.dto';
 import { ListAllProductsDto } from './dto/list-all-products.dto';
+import { ListAllProductsAdminDto } from './dto/list-all-products-admin.dto';
 import { ProductSummaryPageDto } from './dto/product-summary.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateVariantDto } from './dto/update-variant.dto';
@@ -53,6 +54,14 @@ export class ProductsController {
   @Public()
   findBySlug(@Param('slug') slug: string) {
     return this.productsService.findBySlug(slug);
+  }
+
+  @Get('admin')
+  @Roles(Role.Admin)
+  findAllAdmin(
+    @Query() query: ListAllProductsAdminDto,
+  ): Promise<ProductSummaryPageDto> {
+    return this.productsService.findAllForAdmin(query);
   }
 
   @Get(':id')
