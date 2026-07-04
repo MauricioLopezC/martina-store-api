@@ -69,18 +69,41 @@ export default class ProductSeeder implements Seeder {
       );
 
     const talles = await createAttributeValues(talleAttr, [
-      'XS', 'S', 'M', 'L', 'XL', 'XXL',
+      'XS',
+      'S',
+      'M',
+      'L',
+      'XL',
+      'XXL',
     ]);
     const colores = await createAttributeValues(colorAttr, [
-      'Negro', 'Blanco', 'Rojo', 'Azul', 'Gris',
-      'Beige', 'Verde', 'Rosa', 'Celeste', 'Azul marino',
+      'Negro',
+      'Blanco',
+      'Rojo',
+      'Azul',
+      'Gris',
+      'Beige',
+      'Verde',
+      'Rosa',
+      'Celeste',
+      'Azul marino',
     ]);
 
     const tallesJeanMujer = await createAttributeValues(talleAttr, [
-      '34', '36', '38', '40', '42', '44',
+      '34',
+      '36',
+      '38',
+      '40',
+      '42',
+      '44',
     ]);
     const tallesJeanHombre = await createAttributeValues(talleAttr, [
-      '28', '30', '32', '34', '36', '38',
+      '28',
+      '30',
+      '32',
+      '34',
+      '36',
+      '38',
     ]);
 
     const products: ProductData[] = [

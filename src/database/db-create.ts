@@ -4,4 +4,7 @@ import { dataSource } from './data-source';
 
 createDatabase({ ifNotExist: true, options: dataSource.options })
   .then(() => console.log('Database created'))
-  .catch((err) => { console.error(err); process.exit(1); });
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

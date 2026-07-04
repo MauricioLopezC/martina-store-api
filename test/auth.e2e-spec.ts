@@ -1,4 +1,8 @@
-import { ClassSerializerInterceptor, INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -23,14 +27,18 @@ describe('Auth (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-    app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+    app.useGlobalInterceptors(
+      new ClassSerializerInterceptor(app.get(Reflector)),
+    );
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
   });
 
   afterAll(async () => {
-    await dataSource.query('DELETE FROM users WHERE email = $1', [testUser.email]);
+    await dataSource.query('DELETE FROM users WHERE email = $1', [
+      testUser.email,
+    ]);
     await app.close();
   });
 

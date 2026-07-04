@@ -21,7 +21,8 @@ export class AttributesService {
 
   async create(dto: CreateAttributeDto): Promise<Attribute> {
     const existing = await this.attributesRepo.findOneBy({ name: dto.name });
-    if (existing) throw new ConflictError(`Attribute "${dto.name}" already exists`);
+    if (existing)
+      throw new ConflictError(`Attribute "${dto.name}" already exists`);
     const attribute = this.attributesRepo.create(dto);
     return this.attributesRepo.save(attribute);
   }
@@ -43,7 +44,8 @@ export class AttributesService {
     const attribute = await this.findOne(id);
     if (dto.name && dto.name !== attribute.name) {
       const existing = await this.attributesRepo.findOneBy({ name: dto.name });
-      if (existing) throw new ConflictError(`Attribute "${dto.name}" already exists`);
+      if (existing)
+        throw new ConflictError(`Attribute "${dto.name}" already exists`);
     }
     Object.assign(attribute, dto);
     return this.attributesRepo.save(attribute);
@@ -54,11 +56,19 @@ export class AttributesService {
     await this.attributesRepo.remove(attribute);
   }
 
-  async createValue(attributeId: number, dto: CreateAttributeValueDto): Promise<AttributeValue> {
+  async createValue(
+    attributeId: number,
+    dto: CreateAttributeValueDto,
+  ): Promise<AttributeValue> {
     await this.findOne(attributeId);
-    const existing = await this.valuesRepo.findOneBy({ attributeId, value: dto.value });
+    const existing = await this.valuesRepo.findOneBy({
+      attributeId,
+      value: dto.value,
+    });
     if (existing) {
-      throw new ConflictError(`Value "${dto.value}" already exists for this attribute`);
+      throw new ConflictError(
+        `Value "${dto.value}" already exists for this attribute`,
+      );
     }
     const attrValue = this.valuesRepo.create({ ...dto, attributeId });
     return this.valuesRepo.save(attrValue);
@@ -69,12 +79,20 @@ export class AttributesService {
     valueId: number,
     dto: UpdateAttributeValueDto,
   ): Promise<AttributeValue> {
-    const attrValue = await this.valuesRepo.findOneBy({ id: valueId, attributeId });
+    const attrValue = await this.valuesRepo.findOneBy({
+      id: valueId,
+      attributeId,
+    });
     if (!attrValue) throw new NotFoundError(`Value #${valueId} not found`);
     if (dto.value && dto.value !== attrValue.value) {
-      const existing = await this.valuesRepo.findOneBy({ attributeId, value: dto.value });
+      const existing = await this.valuesRepo.findOneBy({
+        attributeId,
+        value: dto.value,
+      });
       if (existing) {
-        throw new ConflictError(`Value "${dto.value}" already exists for this attribute`);
+        throw new ConflictError(
+          `Value "${dto.value}" already exists for this attribute`,
+        );
       }
     }
     Object.assign(attrValue, dto);
@@ -82,7 +100,10 @@ export class AttributesService {
   }
 
   async removeValue(attributeId: number, valueId: number): Promise<void> {
-    const attrValue = await this.valuesRepo.findOneBy({ id: valueId, attributeId });
+    const attrValue = await this.valuesRepo.findOneBy({
+      id: valueId,
+      attributeId,
+    });
     if (!attrValue) throw new NotFoundError(`Value #${valueId} not found`);
     await this.valuesRepo.remove(attrValue);
   }

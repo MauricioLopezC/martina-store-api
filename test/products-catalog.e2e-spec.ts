@@ -1,4 +1,8 @@
-import { ClassSerializerInterceptor, INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -41,7 +45,9 @@ describe('Products catalog (e2e)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalFilters(new AppExceptionFilter());
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-    app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+    app.useGlobalInterceptors(
+      new ClassSerializerInterceptor(app.get(Reflector)),
+    );
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
@@ -60,18 +66,26 @@ describe('Products catalog (e2e)', () => {
 
   afterAll(async () => {
     if (createdProductIds.length) {
-      await dataSource.query('DELETE FROM products WHERE id = ANY($1)', [createdProductIds]);
+      await dataSource.query('DELETE FROM products WHERE id = ANY($1)', [
+        createdProductIds,
+      ]);
     }
     if (createdCategoryIds.length) {
-      await dataSource.query('DELETE FROM categories WHERE id = ANY($1)', [createdCategoryIds]);
+      await dataSource.query('DELETE FROM categories WHERE id = ANY($1)', [
+        createdCategoryIds,
+      ]);
     }
-    await dataSource.query('DELETE FROM users WHERE email = $1', [adminUser.email]);
+    await dataSource.query('DELETE FROM users WHERE email = $1', [
+      adminUser.email,
+    ]);
 
     const localDest = process.env.STORAGE_LOCAL_DEST ?? 'uploads';
     for (const url of uploadedFiles) {
       const filename = url.split('/').pop();
       if (filename) {
-        await fs.unlink(path.resolve(localDest, filename)).catch(() => undefined);
+        await fs
+          .unlink(path.resolve(localDest, filename))
+          .catch(() => undefined);
       }
     }
 
@@ -83,7 +97,11 @@ describe('Products catalog (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: `Remera Test E2E ${run}`, description: 'Producto de prueba e2e', status: 'draft' })
+        .send({
+          name: `Remera Test E2E ${run}`,
+          description: 'Producto de prueba e2e',
+          status: 'draft',
+        })
         .expect(201);
 
       expect(res.body.id).toBeDefined();
@@ -107,7 +125,11 @@ describe('Products catalog (e2e)', () => {
 
       const registerRes = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ name: 'Regular User', email: regularEmail, password: 'password123' });
+        .send({
+          name: 'Regular User',
+          email: regularEmail,
+          password: 'password123',
+        });
 
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
@@ -119,7 +141,9 @@ describe('Products catalog (e2e)', () => {
         .send({ name: 'No permitido', status: 'draft' })
         .expect(403);
 
-      await dataSource.query('DELETE FROM users WHERE id = $1', [registerRes.body.id]);
+      await dataSource.query('DELETE FROM users WHERE id = $1', [
+        registerRes.body.id,
+      ]);
     });
 
     it('devuelve 409 si el slug ya existe', async () => {
@@ -220,14 +244,20 @@ describe('Products catalog (e2e)', () => {
       return request(app.getHttpServer())
         .post('/products/99999/images')
         .set('Authorization', `Bearer ${adminToken}`)
-        .attach('file', fakeJpegBuffer, { filename: 'x.jpg', contentType: 'image/jpeg' })
+        .attach('file', fakeJpegBuffer, {
+          filename: 'x.jpg',
+          contentType: 'image/jpeg',
+        })
         .expect(404);
     });
 
     it('devuelve 401 sin token', () => {
       return request(app.getHttpServer())
         .post(`/products/${productId}/images`)
-        .attach('file', Buffer.from('x'), { filename: 'x.jpg', contentType: 'image/jpeg' })
+        .attach('file', Buffer.from('x'), {
+          filename: 'x.jpg',
+          contentType: 'image/jpeg',
+        })
         .expect(401);
     });
   });
@@ -296,7 +326,9 @@ describe('Products catalog (e2e)', () => {
 
       for (const product of res.body.data) {
         const categoryIds = product.categories.map((c: { id: number }) => c.id);
-        expect(categoryIds).toEqual(expect.arrayContaining([categoryId, otherCategoryId]));
+        expect(categoryIds).toEqual(
+          expect.arrayContaining([categoryId, otherCategoryId]),
+        );
       }
     });
 
@@ -310,7 +342,9 @@ describe('Products catalog (e2e)', () => {
     });
 
     it('devuelve data vacía y total 0 para una categoría inexistente', async () => {
-      const res = await request(app.getHttpServer()).get('/products?categoryId=999999').expect(200);
+      const res = await request(app.getHttpServer())
+        .get('/products?categoryId=999999')
+        .expect(200);
 
       expect(res.body.data).toEqual([]);
       expect(res.body.total).toBe(0);
@@ -334,7 +368,10 @@ describe('Products catalog (e2e)', () => {
       const archivedRes = await request(app.getHttpServer())
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: `Producto Archived Admin E2E ${run}`, status: 'archived' })
+        .send({
+          name: `Producto Archived Admin E2E ${run}`,
+          status: 'archived',
+        })
         .expect(201);
       archivedProductId = archivedRes.body.id;
       createdProductIds.push(archivedProductId);
@@ -342,7 +379,10 @@ describe('Products catalog (e2e)', () => {
       const publishedRes = await request(app.getHttpServer())
         .post('/products')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ name: `Producto Published Admin E2E ${run}`, status: 'published' })
+        .send({
+          name: `Producto Published Admin E2E ${run}`,
+          status: 'published',
+        })
         .expect(201);
       publishedProductId = publishedRes.body.id;
       createdProductIds.push(publishedProductId);
@@ -357,7 +397,11 @@ describe('Products catalog (e2e)', () => {
 
       const registerRes = await request(app.getHttpServer())
         .post('/auth/register')
-        .send({ name: 'Regular User', email: regularEmail, password: 'password123' });
+        .send({
+          name: 'Regular User',
+          email: regularEmail,
+          password: 'password123',
+        });
 
       const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
@@ -368,7 +412,9 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${loginRes.body.access_token}`)
         .expect(403);
 
-      await dataSource.query('DELETE FROM users WHERE id = $1', [registerRes.body.id]);
+      await dataSource.query('DELETE FROM users WHERE id = $1', [
+        registerRes.body.id,
+      ]);
     });
 
     it('sin status, un admin ve productos en cualquier estado', async () => {
@@ -379,7 +425,11 @@ describe('Products catalog (e2e)', () => {
 
       const returnedIds = res.body.data.map((p: { id: number }) => p.id);
       expect(returnedIds).toEqual(
-        expect.arrayContaining([draftProductId, archivedProductId, publishedProductId]),
+        expect.arrayContaining([
+          draftProductId,
+          archivedProductId,
+          publishedProductId,
+        ]),
       );
     });
 

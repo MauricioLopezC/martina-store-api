@@ -9,7 +9,10 @@ export class LocalStorageService implements IStorageService {
 
   constructor(private readonly config: ConfigService) {
     this.dest = config.get<string>('STORAGE_LOCAL_DEST', 'uploads');
-    this.baseUrl = config.get<string>('STORAGE_LOCAL_BASE_URL', 'http://localhost:3000/uploads');
+    this.baseUrl = config.get<string>(
+      'STORAGE_LOCAL_BASE_URL',
+      'http://localhost:3000/uploads',
+    );
   }
 
   async upload(file: Express.Multer.File): Promise<string> {
