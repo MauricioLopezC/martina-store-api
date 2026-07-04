@@ -5,6 +5,7 @@ import { Attribute } from '../../catalog/attributes/entities/attribute.entity';
 import { AttributeValue } from '../../catalog/attributes/entities/attribute-value.entity';
 import { Category } from '../../catalog/categories/entities/category.entity';
 import { Product } from '../../catalog/products/entities/product.entity';
+import { ProductImage } from '../../catalog/products/entities/product-image.entity';
 import { ProductVariant } from '../../catalog/products/entities/product-variant.entity';
 import { ProductStatus } from '../../catalog/products/enums/product-status.enum';
 
@@ -36,6 +37,7 @@ interface ProductData {
   talles: string[];
   colores: string[];
   categoryNames: string[];
+  images: string[];
   tallesPool?: AttributeValue[];
 }
 
@@ -48,6 +50,7 @@ export default class ProductSeeder implements Seeder {
     const categoryRepo = dataSource.getRepository(Category);
     const productRepo = dataSource.getRepository(Product);
     const variantRepo = dataSource.getRepository(ProductVariant);
+    const imageRepo = dataSource.getRepository(ProductImage);
 
     const talleAttr = await firstOrCreate(attributeRepo, { name: 'Talle' });
     const colorAttr = await firstOrCreate(attributeRepo, { name: 'Color' });
@@ -90,6 +93,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['XS', 'S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Blanco', 'Rojo', 'Azul'],
         categoryNames: ['Remeras', 'Deportivo'],
+        images: [
+          'https://images.pexels.com/photos/11757389/pexels-photo-11757389.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/4378326/pexels-photo-4378326.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Remera M51',
@@ -100,6 +107,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Blanco', 'Gris', 'Verde'],
         categoryNames: ['Remeras'],
+        images: [
+          'https://images.pexels.com/photos/8146450/pexels-photo-8146450.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Camisa de lino',
@@ -110,6 +121,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Blanco', 'Beige', 'Celeste'],
         categoryNames: ['Camisas', 'Hombre'],
+        images: [
+          'https://images.pexels.com/photos/5145182/pexels-photo-5145182.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/18031036/pexels-photo-18031036.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Top de mujer',
@@ -120,6 +135,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['XS', 'S', 'M', 'L'],
         colores: ['Negro', 'Blanco', 'Rosa', 'Rojo'],
         categoryNames: ['Tops', 'Mujer'],
+        images: [
+          'https://images.pexels.com/photos/10321731/pexels-photo-10321731.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/13966449/pexels-photo-13966449.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Campera unisex deportiva',
@@ -130,6 +149,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['S', 'M', 'L', 'XL', 'XXL'],
         colores: ['Negro', 'Azul', 'Gris'],
         categoryNames: ['Camperas y Buzos', 'Unisex', 'Deportivo'],
+        images: [
+          'https://images.pexels.com/photos/17167945/pexels-photo-17167945.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/32328361/pexels-photo-32328361.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Jean mujer Zara',
@@ -140,6 +163,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['34', '36', '38', '40', '42', '44'],
         colores: ['Azul', 'Negro', 'Gris'],
         categoryNames: ['Jeans', 'Mujer'],
+        images: [
+          'https://images.pexels.com/photos/16848895/pexels-photo-16848895.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/27542891/pexels-photo-27542891.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
         tallesPool: tallesJeanMujer,
       },
       {
@@ -151,6 +178,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['28', '30', '32', '34', '36', '38'],
         colores: ['Azul', 'Negro', 'Gris'],
         categoryNames: ['Jeans', 'Hombre'],
+        images: [
+          'https://images.pexels.com/photos/7877538/pexels-photo-7877538.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/19220633/pexels-photo-19220633.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
         tallesPool: tallesJeanHombre,
       },
       {
@@ -162,6 +193,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Gris', 'Azul marino'],
         categoryNames: ['Camperas y Buzos', 'Unisex'],
+        images: [
+          'https://images.pexels.com/photos/7479825/pexels-photo-7479825.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/7207120/pexels-photo-7207120.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Vestido floral de verano',
@@ -172,6 +207,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['XS', 'S', 'M', 'L'],
         colores: ['Rosa', 'Blanco', 'Rojo'],
         categoryNames: ['Vestidos', 'Mujer'],
+        images: [
+          'https://images.pexels.com/photos/33554490/pexels-photo-33554490.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/29277214/pexels-photo-29277214.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Bermuda cargo hombre',
@@ -182,6 +221,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['S', 'M', 'L', 'XL'],
         colores: ['Beige', 'Negro', 'Verde'],
         categoryNames: ['Bermudas', 'Hombre'],
+        images: [
+          'https://images.pexels.com/photos/12803209/pexels-photo-12803209.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/18178103/pexels-photo-18178103.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Calza deportiva mujer',
@@ -192,6 +235,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['XS', 'S', 'M', 'L', 'XL'],
         colores: ['Negro', 'Gris', 'Rosa', 'Azul'],
         categoryNames: ['Calzas', 'Mujer', 'Deportivo'],
+        images: [
+          'https://images.pexels.com/photos/14085371/pexels-photo-14085371.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/5262953/pexels-photo-5262953.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
       {
         name: 'Chaleco acolchado unisex',
@@ -202,6 +249,10 @@ export default class ProductSeeder implements Seeder {
         talles: ['S', 'M', 'L', 'XL', 'XXL'],
         colores: ['Negro', 'Azul marino', 'Verde'],
         categoryNames: ['Chalecos', 'Unisex'],
+        images: [
+          'https://images.pexels.com/photos/6001543/pexels-photo-6001543.jpeg?auto=compress&cs=tinysrgb&w=800',
+          'https://images.pexels.com/photos/16756721/pexels-photo-16756721.jpeg?auto=compress&cs=tinysrgb&w=800',
+        ],
       },
     ];
 
@@ -233,6 +284,17 @@ export default class ProductSeeder implements Seeder {
           .relation(Product, 'categories')
           .of(product.id)
           .add(categories.map((c) => c.id));
+      }
+
+      for (const [index, url] of data.images.entries()) {
+        await imageRepo.save(
+          imageRepo.create({
+            product,
+            url,
+            position: index,
+            isCover: index === 0,
+          }),
+        );
       }
 
       const tallesPool = data.tallesPool ?? talles;
