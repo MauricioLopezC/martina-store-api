@@ -362,10 +362,20 @@ export class ProductsService {
     dto: CreateImageDto,
   ): Promise<ProductImage> {
     await this.findOneEntity(productId);
-    console.log(productId);
-    console.log(file);
-    console.log(dto);
     const url = await this.storageService.upload(file);
+
+    if (dto.isCover) {
+      return this.dataSource.transaction(async (manager) => {
+        await manager.update(
+          ProductImage,
+          { productId, isCover: true },
+          { isCover: false },
+        );
+        const image = manager.create(ProductImage, { ...dto, productId, url });
+        return manager.save(image);
+      });
+    }
+
     const image = this.imagesRepo.create({ ...dto, productId, url });
     return this.imagesRepo.save(image);
   }
@@ -377,6 +387,19 @@ export class ProductsService {
   ): Promise<ProductImage> {
     const image = await this.imagesRepo.findOneBy({ id: imageId, productId });
     if (!image) throw new NotFoundError(`Image #${imageId} not found`);
+
+    if (dto.isCover) {
+      return this.dataSource.transaction(async (manager) => {
+        await manager.update(
+          ProductImage,
+          { productId, isCover: true },
+          { isCover: false },
+        );
+        Object.assign(image, dto);
+        return manager.save(image);
+      });
+    }
+
     Object.assign(image, dto);
     return this.imagesRepo.save(image);
   }

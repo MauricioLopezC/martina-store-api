@@ -16,6 +16,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { Public } from '../../auth/decorators/public.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -109,6 +110,19 @@ export class ProductsController {
   @Post(':id/images')
   @Roles(Role.Admin)
   @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        position: { type: 'number' },
+        isCover: { type: 'boolean' },
+        altText: { type: 'string' },
+      },
+      required: ['file'],
+    },
+  })
   createImage(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile(
