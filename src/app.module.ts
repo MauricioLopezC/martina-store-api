@@ -13,6 +13,7 @@ import { AttributesModule } from './catalog/attributes/attributes.module';
 import { CategoriesModule } from './catalog/categories/categories.module';
 import { ProductsModule } from './catalog/products/products.module';
 import { CartModule } from './cart/cart.module';
+import { OrdersModule } from './orders/orders.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -48,6 +49,7 @@ import { StorageModule } from './storage/storage.module';
     CategoriesModule,
     ProductsModule,
     CartModule,
+    OrdersModule,
     StorageModule,
   ],
   controllers: [AppController],
