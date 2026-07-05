@@ -1,18 +1,11 @@
-import {
-  ClassSerializerInterceptor,
-  INestApplication,
-  ValidationPipe,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { AppExceptionFilter } from '../src/common/filters/app-exception.filter';
+import { createTestApp } from './utils/create-test-app';
 
 const fakeJpegBuffer = Buffer.concat([
   Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
@@ -37,20 +30,8 @@ describe('Products catalog (e2e)', () => {
   };
 
   beforeAll(async () => {
-    jest.setTimeout(30000);
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalFilters(new AppExceptionFilter());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-    app.useGlobalInterceptors(
-      new ClassSerializerInterceptor(app.get(Reflector)),
-    );
-    await app.init();
-
-    dataSource = moduleFixture.get(DataSource);
+    app = await createTestApp();
+    dataSource = app.get(DataSource);
 
     const hashed = await bcrypt.hash(adminUser.password, 10);
     await dataSource.query(

@@ -1,38 +1,24 @@
-import {
-  ClassSerializerInterceptor,
-  INestApplication,
-  ValidationPipe,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
+import { createTestApp } from './utils/create-test-app';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
 
+  const run = Date.now().toString(36);
+
   const testUser = {
     name: 'Test User',
-    email: 'test@example.com',
+    email: `test-e2e-${run}@example.com`,
     password: 'password123',
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-    app.useGlobalInterceptors(
-      new ClassSerializerInterceptor(app.get(Reflector)),
-    );
-    await app.init();
-
-    dataSource = moduleFixture.get(DataSource);
+    app = await createTestApp();
+    dataSource = app.get(DataSource);
   });
 
   afterAll(async () => {
