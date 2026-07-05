@@ -2,8 +2,10 @@ import { Transform } from 'class-transformer';
 import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateImageDto {
-  @Transform(({ value }) =>
-    value !== undefined ? parseInt(value, 10) : undefined,
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' || typeof value === 'number'
+      ? parseInt(String(value), 10)
+      : undefined,
   )
   @IsInt()
   @Min(0)

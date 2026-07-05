@@ -3,7 +3,11 @@ import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { LoginResponseDto } from '../src/auth/dto/login-response.dto';
+import { Category } from '../src/catalog/categories/entities/category.entity';
+import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './utils/create-test-app';
+import { body } from './utils/typed-body';
 
 describe('Categories (e2e)', () => {
   let app: INestApplication<App>;
@@ -38,16 +42,16 @@ describe('Categories (e2e)', () => {
     const adminLoginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: adminUser.email, password: adminUser.password });
-    adminToken = adminLoginRes.body.access_token;
+    adminToken = body<LoginResponseDto>(adminLoginRes).access_token;
 
     const registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send(regularUser);
-    regularUserId = registerRes.body.id;
+    regularUserId = body<User>(registerRes).id;
     const regularLoginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: regularUser.email, password: regularUser.password });
-    regularToken = regularLoginRes.body.access_token;
+    regularToken = body<LoginResponseDto>(regularLoginRes).access_token;
   });
 
   afterAll(async () => {
@@ -94,9 +98,10 @@ describe('Categories (e2e)', () => {
         .send({ name: `Categoria E2E ${run}` })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.slug).toBe(`categoria-e2e-${run}`);
-      createdCategoryIds.push(res.body.id);
+      const data = body<Category>(res);
+      expect(data.id).toBeDefined();
+      expect(data.slug).toBe(`categoria-e2e-${run}`);
+      createdCategoryIds.push(data.id);
     });
   });
 
@@ -106,7 +111,7 @@ describe('Categories (e2e)', () => {
         .get('/categories')
         .expect(200);
 
-      const ids = res.body.map((c: { id: number }) => c.id);
+      const ids = body<Category[]>(res).map((c) => c.id);
       expect(ids).toEqual(expect.arrayContaining(createdCategoryIds));
     });
   });
@@ -124,7 +129,7 @@ describe('Categories (e2e)', () => {
         .set('Authorization', `Bearer ${regularToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.id).toBe(createdCategoryIds[0]);
+          expect(body<Category>(res).id).toBe(createdCategoryIds[0]);
         });
     });
 
@@ -152,7 +157,7 @@ describe('Categories (e2e)', () => {
         .send({ description: 'Descripción actualizada' })
         .expect(200);
 
-      expect(res.body.description).toBe('Descripción actualizada');
+      expect(body<Category>(res).description).toBe('Descripción actualizada');
     });
 
     it('devuelve 404 para una categoría inexistente', () => {
@@ -173,7 +178,7 @@ describe('Categories (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Categoria Para Borrar E2E ${run}` })
         .expect(201);
-      toDeleteId = res.body.id;
+      toDeleteId = body<Category>(res).id;
     });
 
     it('devuelve 403 con token de usuario no-admin', () => {

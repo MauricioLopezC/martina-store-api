@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { LoginResponseDto } from '../src/auth/dto/login-response.dto';
+import { MeDto } from '../src/auth/dto/me.dto';
+import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './utils/create-test-app';
+import { body } from './utils/typed-body';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
@@ -35,8 +39,9 @@ describe('Auth (e2e)', () => {
         .send(testUser)
         .expect(201)
         .expect((res) => {
-          expect(res.body.email).toBe(testUser.email);
-          expect(res.body.password).toBeUndefined();
+          const data = body<Partial<User>>(res);
+          expect(data.email).toBe(testUser.email);
+          expect(data.password).toBeUndefined();
         });
     });
 
@@ -69,8 +74,9 @@ describe('Auth (e2e)', () => {
         .send({ email: testUser.email, password: testUser.password })
         .expect(201)
         .expect((res) => {
-          expect(res.body.access_token).toBeDefined();
-          expect(typeof res.body.access_token).toBe('string');
+          const data = body<LoginResponseDto>(res);
+          expect(data.access_token).toBeDefined();
+          expect(typeof data.access_token).toBe('string');
         });
     });
   });
@@ -82,7 +88,7 @@ describe('Auth (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: testUser.email, password: testUser.password });
-      accessToken = res.body.access_token;
+      accessToken = body<LoginResponseDto>(res).access_token;
     });
 
     it('returns 401 without token', () => {
@@ -102,9 +108,10 @@ describe('Auth (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.email).toBe(testUser.email);
-          expect(res.body.userId).toBeDefined();
-          expect(res.body.role).toBe('user');
+          const data = body<MeDto>(res);
+          expect(data.email).toBe(testUser.email);
+          expect(data.userId).toBeDefined();
+          expect(data.role).toBe('user');
         });
     });
   });

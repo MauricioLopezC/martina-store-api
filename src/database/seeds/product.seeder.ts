@@ -1,5 +1,5 @@
 import { Decimal } from 'decimal.js';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, DeepPartial, FindOptionsWhere, Repository } from 'typeorm';
 import { Seeder } from 'typeorm-extension';
 
 import { Attribute } from '../../catalog/attributes/entities/attribute.entity';
@@ -24,10 +24,10 @@ async function firstOrCreate<T extends object>(
   repo: Repository<T>,
   where: Partial<T>,
 ): Promise<T> {
-  const found = await repo.findOne({ where: where as any });
+  const found = await repo.findOne({ where: where as FindOptionsWhere<T> });
   if (found) return found;
-  const entity = repo.create(where as any);
-  return repo.save(entity as any);
+  const entity = repo.create(where as DeepPartial<T>);
+  return repo.save(entity);
 }
 
 interface ProductData {

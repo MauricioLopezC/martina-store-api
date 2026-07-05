@@ -5,7 +5,16 @@ import * as path from 'path';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { LoginResponseDto } from '../src/auth/dto/login-response.dto';
+import { Category } from '../src/catalog/categories/entities/category.entity';
+import { Product } from '../src/catalog/products/entities/product.entity';
+import { ProductImage } from '../src/catalog/products/entities/product-image.entity';
+import { ProductVariant } from '../src/catalog/products/entities/product-variant.entity';
+import { ProductDetailDto } from '../src/catalog/products/dto/product-detail.dto';
+import { ProductSummaryPageDto } from '../src/catalog/products/dto/product-summary.dto';
+import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './utils/create-test-app';
+import { body } from './utils/typed-body';
 
 const fakeJpegBuffer = Buffer.concat([
   Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
@@ -42,7 +51,7 @@ describe('Products catalog (e2e)', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: adminUser.email, password: adminUser.password });
-    adminToken = loginRes.body.access_token;
+    adminToken = body<LoginResponseDto>(loginRes).access_token;
   });
 
   afterAll(async () => {
@@ -85,12 +94,13 @@ describe('Products catalog (e2e)', () => {
         })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.name).toBe(`Remera Test E2E ${run}`);
-      expect(res.body.slug).toBe(`remera-test-e2e-${run}`);
-      expect(res.body.status).toBe('draft');
+      const data = body<Product>(res);
+      expect(data.id).toBeDefined();
+      expect(data.name).toBe(`Remera Test E2E ${run}`);
+      expect(data.slug).toBe(`remera-test-e2e-${run}`);
+      expect(data.status).toBe('draft');
 
-      productId = res.body.id;
+      productId = data.id;
       createdProductIds.push(productId);
     });
 
@@ -118,19 +128,23 @@ describe('Products catalog (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/products')
-        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .set(
+          'Authorization',
+          `Bearer ${body<LoginResponseDto>(loginRes).access_token}`,
+        )
         .send({ name: 'No permitido', status: 'draft' })
         .expect(403);
 
       await dataSource.query('DELETE FROM users WHERE id = $1', [
-        registerRes.body.id,
+        body<User>(registerRes).id,
       ]);
     });
 
     it('devuelve 409 si el slug ya existe', async () => {
-      const { body: existing } = await request(app.getHttpServer())
+      const existingRes = await request(app.getHttpServer())
         .get(`/products/${productId}`)
         .set('Authorization', `Bearer ${adminToken}`);
+      const existing = body<Product>(existingRes);
 
       return request(app.getHttpServer())
         .post('/products')
@@ -153,12 +167,13 @@ describe('Products catalog (e2e)', () => {
         })
         .expect(201);
 
-      expect(res.body.variants).toHaveLength(2);
-      expect(res.body.variants.map((v: { sku: string }) => v.sku)).toEqual(
+      const data = body<Product>(res);
+      expect(data.variants).toHaveLength(2);
+      expect(data.variants.map((v) => v.sku)).toEqual(
         expect.arrayContaining([`RCV-S-${run}`, `RCV-M-${run}`]),
       );
 
-      createdProductIds.push(res.body.id);
+      createdProductIds.push(data.id);
     });
 
     it('devuelve 409 si alguna variante usa un SKU duplicado', async () => {
@@ -172,7 +187,7 @@ describe('Products catalog (e2e)', () => {
         })
         .expect(201);
 
-      createdProductIds.push(base.body.id);
+      createdProductIds.push(body<Product>(base).id);
 
       await request(app.getHttpServer())
         .post('/products')
@@ -200,14 +215,15 @@ describe('Products catalog (e2e)', () => {
         .field('altText', 'Remera azul vista frontal')
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.productId).toBe(productId);
-      expect(res.body.url).toContain('remera-azul.jpg');
-      expect(res.body.isCover).toBe(true);
-      expect(res.body.position).toBe(0);
-      expect(res.body.altText).toBe('Remera azul vista frontal');
+      const data = body<ProductImage>(res);
+      expect(data.id).toBeDefined();
+      expect(data.productId).toBe(productId);
+      expect(data.url).toContain('remera-azul.jpg');
+      expect(data.isCover).toBe(true);
+      expect(data.position).toBe(0);
+      expect(data.altText).toBe('Remera azul vista frontal');
 
-      uploadedFiles.push(res.body.url);
+      uploadedFiles.push(data.url);
     });
 
     it('la imagen aparece en el listado del producto', async () => {
@@ -216,9 +232,10 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(res.body.images).toHaveLength(1);
-      expect(res.body.images[0].isCover).toBe(true);
-      expect(res.body.images[0].url).toContain('remera-azul.jpg');
+      const data = body<Product>(res);
+      expect(data.images).toHaveLength(1);
+      expect(data.images[0].isCover).toBe(true);
+      expect(data.images[0].url).toContain('remera-azul.jpg');
     });
 
     it('devuelve 404 si el producto no existe', () => {
@@ -255,7 +272,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Categoria Filtro E2E ${run}` })
         .expect(201);
-      categoryId = categoryRes.body.id;
+      categoryId = body<Category>(categoryRes).id;
       createdCategoryIds.push(categoryId);
 
       const otherCategoryRes = await request(app.getHttpServer())
@@ -263,7 +280,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Categoria Otra E2E ${run}` })
         .expect(201);
-      otherCategoryId = otherCategoryRes.body.id;
+      otherCategoryId = body<Category>(otherCategoryRes).id;
       createdCategoryIds.push(otherCategoryId);
 
       const inCategory = await Promise.all(
@@ -279,7 +296,7 @@ describe('Products catalog (e2e)', () => {
             .expect(201),
         ),
       );
-      inCategoryIds = inCategory.map((res) => res.body.id);
+      inCategoryIds = inCategory.map((res) => body<Product>(res).id);
       createdProductIds.push(...inCategoryIds);
 
       const outside = await request(app.getHttpServer())
@@ -291,7 +308,7 @@ describe('Products catalog (e2e)', () => {
           categoryIds: [otherCategoryId],
         })
         .expect(201);
-      outsideProductId = outside.body.id;
+      outsideProductId = body<Product>(outside).id;
       createdProductIds.push(outsideProductId);
     });
 
@@ -300,13 +317,14 @@ describe('Products catalog (e2e)', () => {
         .get(`/products?categoryId=${categoryId}&limit=100`)
         .expect(200);
 
-      expect(res.body.total).toBe(inCategoryIds.length);
-      const returnedIds = res.body.data.map((p: { id: number }) => p.id);
+      const data = body<ProductSummaryPageDto>(res);
+      expect(data.total).toBe(inCategoryIds.length);
+      const returnedIds = data.data.map((p) => p.id);
       expect(returnedIds.sort()).toEqual([...inCategoryIds].sort());
       expect(returnedIds).not.toContain(outsideProductId);
 
-      for (const product of res.body.data) {
-        const categoryIds = product.categories.map((c: { id: number }) => c.id);
+      for (const product of data.data) {
+        const categoryIds = product.categories.map((c) => c.id);
         expect(categoryIds).toEqual(
           expect.arrayContaining([categoryId, otherCategoryId]),
         );
@@ -318,8 +336,9 @@ describe('Products catalog (e2e)', () => {
         .get(`/products?categoryId=${categoryId}&page=1&limit=2`)
         .expect(200);
 
-      expect(res.body.total).toBe(inCategoryIds.length);
-      expect(res.body.data).toHaveLength(2);
+      const data = body<ProductSummaryPageDto>(res);
+      expect(data.total).toBe(inCategoryIds.length);
+      expect(data.data).toHaveLength(2);
     });
 
     it('devuelve data vacía y total 0 para una categoría inexistente', async () => {
@@ -327,8 +346,9 @@ describe('Products catalog (e2e)', () => {
         .get('/products?categoryId=999999')
         .expect(200);
 
-      expect(res.body.data).toEqual([]);
-      expect(res.body.total).toBe(0);
+      const data = body<ProductSummaryPageDto>(res);
+      expect(data.data).toEqual([]);
+      expect(data.total).toBe(0);
     });
   });
 
@@ -343,7 +363,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Producto Draft Admin E2E ${run}`, status: 'draft' })
         .expect(201);
-      draftProductId = draftRes.body.id;
+      draftProductId = body<Product>(draftRes).id;
       createdProductIds.push(draftProductId);
 
       const archivedRes = await request(app.getHttpServer())
@@ -354,7 +374,7 @@ describe('Products catalog (e2e)', () => {
           status: 'archived',
         })
         .expect(201);
-      archivedProductId = archivedRes.body.id;
+      archivedProductId = body<Product>(archivedRes).id;
       createdProductIds.push(archivedProductId);
 
       const publishedRes = await request(app.getHttpServer())
@@ -365,7 +385,7 @@ describe('Products catalog (e2e)', () => {
           status: 'published',
         })
         .expect(201);
-      publishedProductId = publishedRes.body.id;
+      publishedProductId = body<Product>(publishedRes).id;
       createdProductIds.push(publishedProductId);
     });
 
@@ -390,11 +410,14 @@ describe('Products catalog (e2e)', () => {
 
       await request(app.getHttpServer())
         .get('/products/admin')
-        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .set(
+          'Authorization',
+          `Bearer ${body<LoginResponseDto>(loginRes).access_token}`,
+        )
         .expect(403);
 
       await dataSource.query('DELETE FROM users WHERE id = $1', [
-        registerRes.body.id,
+        body<User>(registerRes).id,
       ]);
     });
 
@@ -404,7 +427,9 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const returnedIds = res.body.data.map((p: { id: number }) => p.id);
+      const returnedIds = body<ProductSummaryPageDto>(res).data.map(
+        (p) => p.id,
+      );
       expect(returnedIds).toEqual(
         expect.arrayContaining([
           draftProductId,
@@ -420,11 +445,12 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const returnedIds = res.body.data.map((p: { id: number }) => p.id);
+      const data = body<ProductSummaryPageDto>(res);
+      const returnedIds = data.data.map((p) => p.id);
       expect(returnedIds).toContain(draftProductId);
       expect(returnedIds).not.toContain(archivedProductId);
       expect(returnedIds).not.toContain(publishedProductId);
-      for (const product of res.body.data) {
+      for (const product of data.data) {
         expect(product.status).toBe('draft');
       }
     });
@@ -439,7 +465,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Producto Slug E2E ${run}`, status: 'published' })
         .expect(201);
-      publishedSlugProductId = res.body.id;
+      publishedSlugProductId = body<Product>(res).id;
       createdProductIds.push(publishedSlugProductId);
     });
 
@@ -448,7 +474,7 @@ describe('Products catalog (e2e)', () => {
         .get(`/products/slug/producto-slug-e2e-${run}`)
         .expect(200);
 
-      expect(res.body.id).toBe(publishedSlugProductId);
+      expect(body<Product>(res).id).toBe(publishedSlugProductId);
     });
 
     it('devuelve 404 para un producto en estado draft', () => {
@@ -470,10 +496,11 @@ describe('Products catalog (e2e)', () => {
         .get(`/products/${productId}`)
         .expect(200);
 
-      expect(res.body.id).toBe(productId);
-      expect(res.body.variants).toBeDefined();
-      expect(res.body.images).toBeDefined();
-      expect(res.body.categories).toBeDefined();
+      const data = body<ProductDetailDto>(res);
+      expect(data.id).toBe(productId);
+      expect(data.variants).toBeDefined();
+      expect(data.images).toBeDefined();
+      expect(data.categories).toBeDefined();
     });
 
     it('devuelve 404 para un producto inexistente', () => {
@@ -499,12 +526,15 @@ describe('Products catalog (e2e)', () => {
 
       await request(app.getHttpServer())
         .patch(`/products/${productId}`)
-        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .set(
+          'Authorization',
+          `Bearer ${body<LoginResponseDto>(loginRes).access_token}`,
+        )
         .send({ status: 'published' })
         .expect(403);
 
       await dataSource.query('DELETE FROM users WHERE id = $1', [
-        registerRes.body.id,
+        body<User>(registerRes).id,
       ]);
     });
 
@@ -515,8 +545,9 @@ describe('Products catalog (e2e)', () => {
         .send({ status: 'published', brand: 'Martina' })
         .expect(200);
 
-      expect(res.body.status).toBe('published');
-      expect(res.body.brand).toBe('Martina');
+      const data = body<Product>(res);
+      expect(data.status).toBe('published');
+      expect(data.brand).toBe('Martina');
     });
 
     it('devuelve 404 para un producto inexistente', () => {
@@ -538,7 +569,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Producto Variantes E2E ${run}`, status: 'draft' })
         .expect(201);
-      variantProductId = res.body.id;
+      variantProductId = body<Product>(res).id;
       createdProductIds.push(variantProductId);
     });
 
@@ -559,12 +590,15 @@ describe('Products catalog (e2e)', () => {
 
       await request(app.getHttpServer())
         .post(`/products/${variantProductId}/variants`)
-        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .set(
+          'Authorization',
+          `Bearer ${body<LoginResponseDto>(loginRes).access_token}`,
+        )
         .send({ sku: `NO-PERMITIDO-${run}`, price: 100 })
         .expect(403);
 
       await dataSource.query('DELETE FROM users WHERE id = $1', [
-        registerRes.body.id,
+        body<User>(registerRes).id,
       ]);
     });
 
@@ -575,9 +609,10 @@ describe('Products catalog (e2e)', () => {
         .send({ sku: `VAR-E2E-${run}`, price: 900, stock: 3 })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.sku).toBe(`VAR-E2E-${run}`);
-      variantId = res.body.id;
+      const data = body<ProductVariant>(res);
+      expect(data.id).toBeDefined();
+      expect(data.sku).toBe(`VAR-E2E-${run}`);
+      variantId = data.id;
     });
 
     it('POST /products/:id/variants — 409 si el SKU ya existe', () => {
@@ -595,8 +630,9 @@ describe('Products catalog (e2e)', () => {
         .send({ price: 950, stock: 10 })
         .expect(200);
 
-      expect(res.body.price).toBe(950);
-      expect(res.body.stock).toBe(10);
+      const data = body<ProductVariant>(res);
+      expect(data.price).toBe(950);
+      expect(data.stock).toBe(10);
     });
 
     it('PATCH /products/:id/variants/:variantId — 404 con variantId inexistente', () => {
@@ -631,7 +667,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Producto Imagenes E2E ${run}`, status: 'draft' })
         .expect(201);
-      imageProductId = productRes.body.id;
+      imageProductId = body<Product>(productRes).id;
       createdProductIds.push(imageProductId);
 
       const imageRes = await request(app.getHttpServer())
@@ -644,8 +680,9 @@ describe('Products catalog (e2e)', () => {
         .field('position', '0')
         .field('isCover', 'false')
         .expect(201);
-      imageId = imageRes.body.id;
-      uploadedFiles.push(imageRes.body.url);
+      const image = body<ProductImage>(imageRes);
+      imageId = image.id;
+      uploadedFiles.push(image.url);
     });
 
     it('PATCH /products/:id/images/:imageId — actualiza isCover y altText', async () => {
@@ -655,8 +692,9 @@ describe('Products catalog (e2e)', () => {
         .send({ isCover: true, altText: 'Texto alternativo actualizado' })
         .expect(200);
 
-      expect(res.body.isCover).toBe(true);
-      expect(res.body.altText).toBe('Texto alternativo actualizado');
+      const data = body<ProductImage>(res);
+      expect(data.isCover).toBe(true);
+      expect(data.altText).toBe('Texto alternativo actualizado');
     });
 
     it('DELETE /products/:id/images/:imageId — elimina la imagen', async () => {
@@ -670,7 +708,7 @@ describe('Products catalog (e2e)', () => {
         .expect(200);
 
       expect(
-        res.body.images.some((img: { id: number }) => img.id === imageId),
+        body<ProductDetailDto>(res).images.some((img) => img.id === imageId),
       ).toBe(false);
     });
   });
@@ -684,7 +722,7 @@ describe('Products catalog (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Producto Para Borrar E2E ${run}`, status: 'draft' })
         .expect(201);
-      toDeleteId = res.body.id;
+      toDeleteId = body<Product>(res).id;
     });
 
     it('devuelve 403 con token de usuario no-admin', async () => {
@@ -704,11 +742,14 @@ describe('Products catalog (e2e)', () => {
 
       await request(app.getHttpServer())
         .delete(`/products/${toDeleteId}`)
-        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .set(
+          'Authorization',
+          `Bearer ${body<LoginResponseDto>(loginRes).access_token}`,
+        )
         .expect(403);
 
       await dataSource.query('DELETE FROM users WHERE id = $1', [
-        registerRes.body.id,
+        body<User>(registerRes).id,
       ]);
     });
 

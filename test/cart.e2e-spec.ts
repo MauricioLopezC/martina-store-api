@@ -3,7 +3,13 @@ import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { LoginResponseDto } from '../src/auth/dto/login-response.dto';
+import { CartDto } from '../src/cart/dto/cart.dto';
+import { Product } from '../src/catalog/products/entities/product.entity';
+import { ProductVariant } from '../src/catalog/products/entities/product-variant.entity';
+import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './utils/create-test-app';
+import { body } from './utils/typed-body';
 
 describe('Cart (e2e)', () => {
   let app: INestApplication<App>;
@@ -46,25 +52,25 @@ describe('Cart (e2e)', () => {
     const adminLoginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: adminUser.email, password: adminUser.password });
-    const adminToken: string = adminLoginRes.body.access_token;
+    const adminToken = body<LoginResponseDto>(adminLoginRes).access_token;
 
     const registerA = await request(app.getHttpServer())
       .post('/auth/register')
       .send(userA);
-    userAId = registerA.body.id;
+    userAId = body<User>(registerA).id;
     const loginA = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: userA.email, password: userA.password });
-    userAToken = loginA.body.access_token;
+    userAToken = body<LoginResponseDto>(loginA).access_token;
 
     const registerB = await request(app.getHttpServer())
       .post('/auth/register')
       .send(userB);
-    userBId = registerB.body.id;
+    userBId = body<User>(registerB).id;
     const loginB = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: userB.email, password: userB.password });
-    userBToken = loginB.body.access_token;
+    userBToken = body<LoginResponseDto>(loginB).access_token;
 
     const productRes = await request(app.getHttpServer())
       .post('/products')
@@ -75,15 +81,16 @@ describe('Cart (e2e)', () => {
         variants: [{ sku: `CART-VAR-${run}`, price: 1000, stock: 5 }],
       })
       .expect(201);
-    productId = productRes.body.id;
-    variantId = productRes.body.variants[0].id;
+    const product = body<Product>(productRes);
+    productId = product.id;
+    variantId = product.variants[0].id;
 
     const limitedRes = await request(app.getHttpServer())
       .post(`/products/${productId}/variants`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ sku: `CART-VAR-LIMITED-${run}`, price: 500, stock: 1 })
       .expect(201);
-    limitedVariantId = limitedRes.body.id;
+    limitedVariantId = body<ProductVariant>(limitedRes).id;
   });
 
   afterAll(async () => {
@@ -111,9 +118,10 @@ describe('Cart (e2e)', () => {
         .set('Authorization', `Bearer ${userAToken}`)
         .expect(200);
 
-      expect(res.body.items).toEqual([]);
-      expect(res.body.totalItems).toBe(0);
-      expect(res.body.totalPrice).toBe(0);
+      const data = body<CartDto>(res);
+      expect(data.items).toEqual([]);
+      expect(data.totalItems).toBe(0);
+      expect(data.totalPrice).toBe(0);
     });
   });
 
@@ -133,10 +141,11 @@ describe('Cart (e2e)', () => {
         .send({ variantId, quantity: 2 })
         .expect(201);
 
-      expect(res.body.items).toHaveLength(1);
-      expect(res.body.items[0].variantId).toBe(variantId);
-      expect(res.body.items[0].quantity).toBe(2);
-      expect(res.body.totalItems).toBe(2);
+      const data = body<CartDto>(res);
+      expect(data.items).toHaveLength(1);
+      expect(data.items[0].variantId).toBe(variantId);
+      expect(data.items[0].quantity).toBe(2);
+      expect(data.totalItems).toBe(2);
     });
 
     it('agregar el mismo variantId de nuevo incrementa la cantidad', async () => {
@@ -146,8 +155,9 @@ describe('Cart (e2e)', () => {
         .send({ variantId, quantity: 1 })
         .expect(201);
 
-      expect(res.body.items).toHaveLength(1);
-      expect(res.body.items[0].quantity).toBe(3);
+      const data = body<CartDto>(res);
+      expect(data.items).toHaveLength(1);
+      expect(data.items[0].quantity).toBe(3);
     });
 
     it('devuelve 409 si la cantidad supera el stock disponible', () => {
@@ -166,7 +176,7 @@ describe('Cart (e2e)', () => {
       const res = await request(app.getHttpServer())
         .get('/me/cart')
         .set('Authorization', `Bearer ${userAToken}`);
-      itemId = res.body.items[0].id;
+      itemId = body<CartDto>(res).items[0].id;
     });
 
     it('actualiza la cantidad del item', async () => {
@@ -176,7 +186,7 @@ describe('Cart (e2e)', () => {
         .send({ quantity: 1 })
         .expect(200);
 
-      expect(res.body.items[0].quantity).toBe(1);
+      expect(body<CartDto>(res).items[0].quantity).toBe(1);
     });
 
     it('devuelve 404 si el item pertenece a otro usuario', () => {
@@ -193,7 +203,7 @@ describe('Cart (e2e)', () => {
       const res = await request(app.getHttpServer())
         .get('/me/cart')
         .set('Authorization', `Bearer ${userAToken}`);
-      const itemId = res.body.items[0].id;
+      const itemId = body<CartDto>(res).items[0].id;
 
       await request(app.getHttpServer())
         .delete(`/me/cart/items/${itemId}`)
@@ -205,14 +215,14 @@ describe('Cart (e2e)', () => {
       const cartRes = await request(app.getHttpServer())
         .get('/me/cart')
         .set('Authorization', `Bearer ${userAToken}`);
-      const itemId = cartRes.body.items[0].id;
+      const itemId = body<CartDto>(cartRes).items[0].id;
 
       const res = await request(app.getHttpServer())
         .delete(`/me/cart/items/${itemId}`)
         .set('Authorization', `Bearer ${userAToken}`)
         .expect(200);
 
-      expect(res.body.items).toEqual([]);
+      expect(body<CartDto>(res).items).toEqual([]);
     });
   });
 
@@ -236,7 +246,7 @@ describe('Cart (e2e)', () => {
         .set('Authorization', `Bearer ${userAToken}`)
         .expect(200);
 
-      expect(res.body.items).toEqual([]);
+      expect(body<CartDto>(res).items).toEqual([]);
     });
   });
 });

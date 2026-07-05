@@ -25,7 +25,7 @@ export default class CategorySeeder implements Seeder {
     const mujer = await upsert('Mujer');
     const hombre = await upsert('Hombre');
     const unisex = await upsert('Unisex');
-    const deportivo = await upsert('Deportivo');
+    await upsert('Deportivo');
 
     // Subcategorías
     await upsert('Remeras', unisex);

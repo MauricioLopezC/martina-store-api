@@ -3,7 +3,12 @@ import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { LoginResponseDto } from '../src/auth/dto/login-response.dto';
+import { Attribute } from '../src/catalog/attributes/entities/attribute.entity';
+import { AttributeValue } from '../src/catalog/attributes/entities/attribute-value.entity';
+import { User } from '../src/users/entities/user.entity';
 import { createTestApp } from './utils/create-test-app';
+import { body } from './utils/typed-body';
 
 describe('Attributes (e2e)', () => {
   let app: INestApplication<App>;
@@ -39,16 +44,16 @@ describe('Attributes (e2e)', () => {
     const adminLoginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: adminUser.email, password: adminUser.password });
-    adminToken = adminLoginRes.body.access_token;
+    adminToken = body<LoginResponseDto>(adminLoginRes).access_token;
 
     const registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send(regularUser);
-    regularUserId = registerRes.body.id;
+    regularUserId = body<User>(registerRes).id;
     const regularLoginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: regularUser.email, password: regularUser.password });
-    regularToken = regularLoginRes.body.access_token;
+    regularToken = body<LoginResponseDto>(regularLoginRes).access_token;
   });
 
   afterAll(async () => {
@@ -88,9 +93,10 @@ describe('Attributes (e2e)', () => {
         .send({ name: `Color E2E ${run}` })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.name).toBe(`Color E2E ${run}`);
-      attributeId = res.body.id;
+      const data = body<Attribute>(res);
+      expect(data.id).toBeDefined();
+      expect(data.name).toBe(`Color E2E ${run}`);
+      attributeId = data.id;
       createdAttributeIds.push(attributeId);
     });
   });
@@ -106,7 +112,7 @@ describe('Attributes (e2e)', () => {
         .set('Authorization', `Bearer ${regularToken}`)
         .expect(200);
 
-      const ids = res.body.map((a: { id: number }) => a.id);
+      const ids = body<Attribute[]>(res).map((a) => a.id);
       expect(ids).toContain(attributeId);
     });
   });
@@ -124,7 +130,7 @@ describe('Attributes (e2e)', () => {
         .set('Authorization', `Bearer ${regularToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.id).toBe(attributeId);
+          expect(body<Attribute>(res).id).toBe(attributeId);
         });
     });
 
@@ -152,7 +158,7 @@ describe('Attributes (e2e)', () => {
         .send({ name: `Color Actualizado E2E ${run}` })
         .expect(200);
 
-      expect(res.body.name).toBe(`Color Actualizado E2E ${run}`);
+      expect(body<Attribute>(res).name).toBe(`Color Actualizado E2E ${run}`);
     });
   });
 
@@ -172,9 +178,10 @@ describe('Attributes (e2e)', () => {
         .send({ value: 'Rojo' })
         .expect(201);
 
-      expect(res.body.id).toBeDefined();
-      expect(res.body.value).toBe('Rojo');
-      expect(res.body.attributeId).toBe(attributeId);
+      const data = body<AttributeValue>(res);
+      expect(data.id).toBeDefined();
+      expect(data.value).toBe('Rojo');
+      expect(data.attributeId).toBe(attributeId);
     });
   });
 
@@ -187,7 +194,7 @@ describe('Attributes (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ value: 'Azul' })
         .expect(201);
-      valueId = res.body.id;
+      valueId = body<AttributeValue>(res).id;
     });
 
     it('devuelve 403 al actualizar con token de usuario no-admin', () => {
@@ -205,7 +212,7 @@ describe('Attributes (e2e)', () => {
         .send({ value: 'Azul Marino' })
         .expect(200);
 
-      expect(res.body.value).toBe('Azul Marino');
+      expect(body<AttributeValue>(res).value).toBe('Azul Marino');
     });
 
     it('devuelve 403 al eliminar con token de usuario no-admin', () => {
@@ -232,7 +239,7 @@ describe('Attributes (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: `Talle E2E ${run}` })
         .expect(201);
-      toDeleteId = res.body.id;
+      toDeleteId = body<Attribute>(res).id;
     });
 
     it('devuelve 403 con token de usuario no-admin', () => {
