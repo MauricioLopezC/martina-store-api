@@ -14,6 +14,8 @@ const options: DataSourceOptions & SeederOptions = {
   database: process.env.DB_NAME ?? 'martina-store-nest',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   seeds: [__dirname + '/seeds/**/*{.ts,.js}'],
+  synchronize: false,
+  migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
 };
 
 export const dataSource = new DataSource(options);

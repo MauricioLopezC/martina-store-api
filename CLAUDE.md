@@ -25,6 +25,13 @@ pnpm format           # Prettier
 
 # Database (Docker)
 docker compose up -d  # start Postgres 17 on port 5432
+
+# Migrations (schema is managed by migrations, not synchronize)
+pnpm migration:generate src/database/migrations/<Name>  # diff entities vs current DB schema
+pnpm migration:create src/database/migrations/<Name>    # empty migration file
+pnpm migration:run                                       # apply pending migrations (dev)
+pnpm migration:revert                                     # revert last migration (dev)
+pnpm migration:show                                        # list migrations and their status
 ```
 
 ## Environment
@@ -41,9 +48,11 @@ Copy `.env.example` to `.env`. Required variables:
 | `JWT_SECRET` | _(any string)_ |
 | `JWT_EXPIRES_IN` | `1h` |
 
-TypeORM runs with `synchronize: true` — schema is auto-synced from entities in dev.
+TypeORM runs with `synchronize: false` — schema is managed exclusively through migrations in `src/database/migrations/` (see Commands above). The `DataSource` used by the CLI and by `db-create`/`db-drop`/`seed:run` lives in `src/database/data-source.ts`; `TypeOrmModule.forRootAsync` in `src/app.module.ts` mirrors the same `migrations` glob but never runs them automatically (`migrationsRun: false`) — apply them explicitly with `pnpm migration:run`.
 
-E2e tests use a separate `.env.test` (copy `.env.example` to `.env.test`, same credentials but a different `DB_NAME`, e.g. `martina-store-nest-test`) so they never touch the dev database. `ConfigModule` in `src/app.module.ts` loads `.env.test` instead of `.env` when `NODE_ENV=test`, which `pnpm test:e2e` sets automatically. Create the test database once with `pnpm db:create:test` (drop it with `pnpm db:drop:test`).
+**Important:** `createDatabase()` from `typeorm-extension` (used in `db-create.ts`) has its own `synchronize` option, defaulting to `true`, independent of the `DataSource`'s own `synchronize` flag. `db-create.ts` passes `synchronize: false` explicitly — if that's ever removed, `db:create`/`db:create:test` will silently sync the full schema from entities and mask any migration drift.
+
+E2e tests use a separate `.env.test` (copy `.env.example` to `.env.test`, same credentials but a different `DB_NAME`, e.g. `martina-store-nest-test`) so they never touch the dev database. `ConfigModule` in `src/app.module.ts` loads `.env.test` instead of `.env` when `NODE_ENV=test`, which `pnpm test:e2e` sets automatically. A `pretest:e2e` lifecycle script runs before every `pnpm test:e2e`: it drops and recreates the test database, then runs all migrations against it (`pnpm migration:run:test`) — the test DB always starts from a clean, migration-built schema, no manual setup needed. To do it manually: `pnpm db:create:test` / `pnpm db:drop:test`.
 
 ## Architecture
 
