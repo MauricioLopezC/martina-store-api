@@ -429,4 +429,298 @@ describe('Products catalog (e2e)', () => {
       }
     });
   });
+
+  describe('GET /products/slug/:slug — busca un producto por slug', () => {
+    let publishedSlugProductId: number;
+
+    beforeAll(async () => {
+      const res = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Slug E2E ${run}`, status: 'published' })
+        .expect(201);
+      publishedSlugProductId = res.body.id;
+      createdProductIds.push(publishedSlugProductId);
+    });
+
+    it('devuelve el producto sin necesidad de token', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/products/slug/producto-slug-e2e-${run}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(publishedSlugProductId);
+    });
+
+    it('devuelve 404 para un producto en estado draft', () => {
+      return request(app.getHttpServer())
+        .get(`/products/slug/remera-test-e2e-${run}`)
+        .expect(404);
+    });
+
+    it('devuelve 404 para un slug inexistente', () => {
+      return request(app.getHttpServer())
+        .get('/products/slug/no-existe-e2e')
+        .expect(404);
+    });
+  });
+
+  describe('GET /products/:id — detalle del producto', () => {
+    it('devuelve el detalle sin necesidad de token', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/products/${productId}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(productId);
+      expect(res.body.variants).toBeDefined();
+      expect(res.body.images).toBeDefined();
+      expect(res.body.categories).toBeDefined();
+    });
+
+    it('devuelve 404 para un producto inexistente', () => {
+      return request(app.getHttpServer()).get('/products/999999').expect(404);
+    });
+  });
+
+  describe('PATCH /products/:id — admin actualiza un producto', () => {
+    it('devuelve 403 con token de usuario no-admin', async () => {
+      const regularEmail = `regular-update-e2e-${run}@example.com`;
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          name: 'Regular User',
+          email: regularEmail,
+          password: 'password123',
+        });
+
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: regularEmail, password: 'password123' });
+
+      await request(app.getHttpServer())
+        .patch(`/products/${productId}`)
+        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .send({ status: 'published' })
+        .expect(403);
+
+      await dataSource.query('DELETE FROM users WHERE id = $1', [
+        registerRes.body.id,
+      ]);
+    });
+
+    it('actualiza el producto como admin', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/products/${productId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'published', brand: 'Martina' })
+        .expect(200);
+
+      expect(res.body.status).toBe('published');
+      expect(res.body.brand).toBe('Martina');
+    });
+
+    it('devuelve 404 para un producto inexistente', () => {
+      return request(app.getHttpServer())
+        .patch('/products/999999')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'published' })
+        .expect(404);
+    });
+  });
+
+  describe('Variantes de producto', () => {
+    let variantProductId: number;
+    let variantId: number;
+
+    beforeAll(async () => {
+      const res = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Variantes E2E ${run}`, status: 'draft' })
+        .expect(201);
+      variantProductId = res.body.id;
+      createdProductIds.push(variantProductId);
+    });
+
+    it('POST /products/:id/variants — 403 con token de usuario no-admin', async () => {
+      const regularEmail = `regular-variants-e2e-${run}@example.com`;
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          name: 'Regular User',
+          email: regularEmail,
+          password: 'password123',
+        });
+
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: regularEmail, password: 'password123' });
+
+      await request(app.getHttpServer())
+        .post(`/products/${variantProductId}/variants`)
+        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .send({ sku: `NO-PERMITIDO-${run}`, price: 100 })
+        .expect(403);
+
+      await dataSource.query('DELETE FROM users WHERE id = $1', [
+        registerRes.body.id,
+      ]);
+    });
+
+    it('POST /products/:id/variants — agrega una variante al producto', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/products/${variantProductId}/variants`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ sku: `VAR-E2E-${run}`, price: 900, stock: 3 })
+        .expect(201);
+
+      expect(res.body.id).toBeDefined();
+      expect(res.body.sku).toBe(`VAR-E2E-${run}`);
+      variantId = res.body.id;
+    });
+
+    it('POST /products/:id/variants — 409 si el SKU ya existe', () => {
+      return request(app.getHttpServer())
+        .post(`/products/${variantProductId}/variants`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ sku: `VAR-E2E-${run}`, price: 900 })
+        .expect(409);
+    });
+
+    it('PATCH /products/:id/variants/:variantId — actualiza precio y stock', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/products/${variantProductId}/variants/${variantId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ price: 950, stock: 10 })
+        .expect(200);
+
+      expect(res.body.price).toBe(950);
+      expect(res.body.stock).toBe(10);
+    });
+
+    it('PATCH /products/:id/variants/:variantId — 404 con variantId inexistente', () => {
+      return request(app.getHttpServer())
+        .patch(`/products/${variantProductId}/variants/999999`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ price: 100 })
+        .expect(404);
+    });
+
+    it('DELETE /products/:id/variants/:variantId — elimina la variante', async () => {
+      await request(app.getHttpServer())
+        .delete(`/products/${variantProductId}/variants/${variantId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .patch(`/products/${variantProductId}/variants/${variantId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ price: 100 })
+        .expect(404);
+    });
+  });
+
+  describe('PATCH y DELETE /products/:id/images/:imageId', () => {
+    let imageProductId: number;
+    let imageId: number;
+
+    beforeAll(async () => {
+      const productRes = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Imagenes E2E ${run}`, status: 'draft' })
+        .expect(201);
+      imageProductId = productRes.body.id;
+      createdProductIds.push(imageProductId);
+
+      const imageRes = await request(app.getHttpServer())
+        .post(`/products/${imageProductId}/images`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .attach('file', fakeJpegBuffer, {
+          filename: 'imagen-editable.jpg',
+          contentType: 'image/jpeg',
+        })
+        .field('position', '0')
+        .field('isCover', 'false')
+        .expect(201);
+      imageId = imageRes.body.id;
+      uploadedFiles.push(imageRes.body.url);
+    });
+
+    it('PATCH /products/:id/images/:imageId — actualiza isCover y altText', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/products/${imageProductId}/images/${imageId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ isCover: true, altText: 'Texto alternativo actualizado' })
+        .expect(200);
+
+      expect(res.body.isCover).toBe(true);
+      expect(res.body.altText).toBe('Texto alternativo actualizado');
+    });
+
+    it('DELETE /products/:id/images/:imageId — elimina la imagen', async () => {
+      await request(app.getHttpServer())
+        .delete(`/products/${imageProductId}/images/${imageId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(204);
+
+      const res = await request(app.getHttpServer())
+        .get(`/products/${imageProductId}`)
+        .expect(200);
+
+      expect(
+        res.body.images.some((img: { id: number }) => img.id === imageId),
+      ).toBe(false);
+    });
+  });
+
+  describe('DELETE /products/:id — admin elimina un producto', () => {
+    let toDeleteId: number;
+
+    beforeAll(async () => {
+      const res = await request(app.getHttpServer())
+        .post('/products')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: `Producto Para Borrar E2E ${run}`, status: 'draft' })
+        .expect(201);
+      toDeleteId = res.body.id;
+    });
+
+    it('devuelve 403 con token de usuario no-admin', async () => {
+      const regularEmail = `regular-delete-e2e-${run}@example.com`;
+
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          name: 'Regular User',
+          email: regularEmail,
+          password: 'password123',
+        });
+
+      const loginRes = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: regularEmail, password: 'password123' });
+
+      await request(app.getHttpServer())
+        .delete(`/products/${toDeleteId}`)
+        .set('Authorization', `Bearer ${loginRes.body.access_token}`)
+        .expect(403);
+
+      await dataSource.query('DELETE FROM users WHERE id = $1', [
+        registerRes.body.id,
+      ]);
+    });
+
+    it('elimina el producto como admin', async () => {
+      await request(app.getHttpServer())
+        .delete(`/products/${toDeleteId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get(`/products/${toDeleteId}`)
+        .expect(404);
+    });
+  });
 });
