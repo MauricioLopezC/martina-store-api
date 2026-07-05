@@ -12,6 +12,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { AttributesModule } from './catalog/attributes/attributes.module';
 import { CategoriesModule } from './catalog/categories/categories.module';
 import { ProductsModule } from './catalog/products/products.module';
+import { CartModule } from './cart/cart.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { StorageModule } from './storage/storage.module';
     AttributesModule,
     CategoriesModule,
     ProductsModule,
+    CartModule,
     StorageModule,
   ],
   controllers: [AppController],

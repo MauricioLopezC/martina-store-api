@@ -77,6 +77,29 @@ Ropa Mujer   (parent_id = null)
 
 Pivot separada en lugar de un `category_id` directo en `products`, por si un producto puede pertenecer a más de una categoría (ej: una remera que va en "Remeras" y también en "Ofertas").
 
+### carts
+
+| columna    | tipo      | notas                                              |
+| ---------- | --------- | --------------------------------------------------- |
+| id         | INT       | PK                                                  |
+| user_id    | INT       | FK → users, único (un carrito activo por usuario)   |
+| created_at | TIMESTAMP |                                                      |
+| updated_at | TIMESTAMP |                                                      |
+
+### cart_items
+
+| columna    | tipo      | notas                                                         |
+| ---------- | --------- | -------------------------------------------------------------- |
+| id         | INT       | PK                                                              |
+| cart_id    | INT       | FK → carts                                                      |
+| variant_id | INT       | FK → product_variants                                           |
+| quantity   | INT       |                                                                  |
+| price      | DECIMAL   | snapshot del precio de `product_variants.price` al agregarlo   |
+| created_at | TIMESTAMP |                                                                  |
+| updated_at | TIMESTAMP |                                                                  |
+
+Unicidad compuesta `(cart_id, variant_id)`: si se agrega una variante que ya está en el carrito, se incrementa `quantity` en la fila existente en lugar de crear una nueva. No se modela como pivot `@ManyToMany` (como `product_categories`) porque tiene columnas propias (`quantity`, `price`) — mismo criterio que `product_variants`.
+
 ### product_images
 
 | columna    | tipo    | notas                                             |
