@@ -1,3 +1,4 @@
+import { Decimal } from 'decimal.js';
 import { DataSource, Repository } from 'typeorm';
 import { Seeder } from 'typeorm-extension';
 
@@ -342,7 +343,7 @@ export default class ProductSeeder implements Seeder {
           const variant = variantRepo.create({
             product,
             sku,
-            price: data.price,
+            price: new Decimal(data.price),
             stock: faker.number.int({ min: 5, max: 50 }),
             active: true,
             attributeValues: [talleValue, colorValue],

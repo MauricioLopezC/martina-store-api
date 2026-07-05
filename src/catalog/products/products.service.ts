@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Decimal } from 'decimal.js';
 import { DataSource, In, Repository } from 'typeorm';
 import { ConflictError } from '../../common/errors/conflict.error';
 import { NotFoundError } from '../../common/errors/not-found.error';
@@ -93,12 +94,13 @@ export class ProductsService {
       await manager.save(product);
 
       for (const variantDto of variantDtos) {
-        const { attributeValueIds, ...variantFields } = variantDto;
+        const { attributeValueIds, price, ...variantFields } = variantDto;
         const attributeValues = attributeValueIds?.length
           ? await this.attrValuesRepo.findBy({ id: In(attributeValueIds) })
           : [];
         const variant = manager.create(ProductVariant, {
           ...variantFields,
+          price: new Decimal(price),
           productId: product.id,
           attributeValues,
         });
@@ -193,7 +195,7 @@ export class ProductsService {
     const minPriceMap = new Map(
       minPriceRows.map((r) => [
         r.productId,
-        r.minPrice ? parseFloat(r.minPrice) : null,
+        r.minPrice ? new Decimal(r.minPrice).toNumber() : null,
       ]),
     );
 
@@ -240,7 +242,7 @@ export class ProductsService {
         id: v.id,
         productId: v.productId,
         sku: v.sku,
-        price: String(v.price),
+        price: v.price.toFixed(2),
         stock: v.stock,
         active: v.active,
         attributeValues: v.attributeValues.map((av) => ({
@@ -306,8 +308,10 @@ export class ProductsService {
     const attributeValues = dto.attributeValueIds?.length
       ? await this.attrValuesRepo.findBy({ id: In(dto.attributeValueIds) })
       : [];
+    const { price, ...variantFields } = dto;
     const variant = this.variantsRepo.create({
-      ...dto,
+      ...variantFields,
+      price: new Decimal(price),
       productId,
       attributeValues,
     });
@@ -334,8 +338,9 @@ export class ProductsService {
         ? await this.attrValuesRepo.findBy({ id: In(dto.attributeValueIds) })
         : [];
     }
-    const { attributeValueIds: _, ...rest } = dto;
+    const { attributeValueIds: _, price, ...rest } = dto;
     Object.assign(variant, rest);
+    if (price !== undefined) variant.price = new Decimal(price);
     return this.variantsRepo.save(variant);
   }
 

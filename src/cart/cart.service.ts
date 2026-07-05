@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Decimal } from 'decimal.js';
 import { Repository } from 'typeorm';
 import { ConflictError } from '../common/errors/conflict.error';
 import { NotFoundError } from '../common/errors/not-found.error';
@@ -44,7 +45,12 @@ export class CartService {
   }
 
   private toDto(cart: Cart): CartDto {
+    let totalPrice = new Decimal(0);
+
     const items: CartItemDto[] = cart.items.map((item) => {
+      const subtotal = item.price.times(item.quantity);
+      totalPrice = totalPrice.plus(subtotal);
+
       const coverImage =
         item.variant.product.images.find((img) => img.isCover) ??
         item.variant.product.images[0] ??
@@ -57,8 +63,8 @@ export class CartService {
         sku: item.variant.sku,
         coverImageUrl: coverImage?.url ?? null,
         quantity: item.quantity,
-        price: Number(item.price),
-        subtotal: Number(item.price) * item.quantity,
+        price: item.price.toNumber(),
+        subtotal: subtotal.toNumber(),
       };
     });
 
@@ -66,7 +72,7 @@ export class CartService {
       id: cart.id,
       items,
       totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
-      totalPrice: items.reduce((sum, item) => sum + item.subtotal, 0),
+      totalPrice: totalPrice.toNumber(),
     };
   }
 

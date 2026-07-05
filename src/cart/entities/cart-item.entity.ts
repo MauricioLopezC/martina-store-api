@@ -1,3 +1,5 @@
+import { Transform } from 'class-transformer';
+import { Decimal } from 'decimal.js';
 import {
   Column,
   CreateDateColumn,
@@ -7,6 +9,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { decimalTransformer } from '../../common/transformers/decimal.transformer';
 import { ProductVariant } from '../../catalog/products/entities/product-variant.entity';
 import { Cart } from './cart.entity';
 
@@ -31,8 +34,14 @@ export class CartItem {
   @Column({ type: 'int' })
   quantity: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price: number;
+  @Transform(({ value }: { value: Decimal }) => value?.toNumber())
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
+  price: Decimal;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -1,3 +1,5 @@
+import { Transform } from 'class-transformer';
+import { Decimal } from 'decimal.js';
 import {
   Column,
   Entity,
@@ -6,6 +8,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { decimalTransformer } from '../../../common/transformers/decimal.transformer';
 import { AttributeValue } from '../../attributes/entities/attribute-value.entity';
 import { Product } from './product.entity';
 
@@ -23,8 +26,14 @@ export class ProductVariant {
   @Column({ unique: true })
   sku: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price: number;
+  @Transform(({ value }: { value: Decimal }) => value?.toNumber())
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
+  price: Decimal;
 
   @Column({ type: 'int', default: 0 })
   stock: number;
