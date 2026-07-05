@@ -111,4 +111,36 @@ Unicidad compuesta `(cart_id, variant_id)`: si se agrega una variante que ya est
 | is_cover   | BOOLEAN | imagen principal del producto                     |
 | alt_text   | varchar | nullable, texto alternativo (SEO + accesibilidad) |
 
+### orders
+
+| columna              | tipo      | notas                                                         |
+| --------------------- | --------- | -------------------------------------------------------------- |
+| id                     | INT       | PK                                                              |
+| user_id                | INT       | dueño de la orden (sin FK a `users`, mismo criterio que `carts`) |
+| status                 | enum      | `pending_payment`, `paid`, `cancelled`, `shipped`, `delivered`  |
+| total_price            | DECIMAL   | suma de los `order_items.price * quantity`                      |
+| shipping_address_line  | VARCHAR   |                                                                  |
+| shipping_city          | VARCHAR   |                                                                  |
+| shipping_state         | VARCHAR   |                                                                  |
+| shipping_zip_code      | VARCHAR   |                                                                  |
+| shipping_phone         | VARCHAR   | nullable                                                        |
+| external_reference     | VARCHAR   | nullable, único — reservado para el futuro `PaymentsModule` (MercadoPago), correlaciona el webhook de pago con la orden |
+| created_at             | TIMESTAMP |                                                                  |
+| updated_at             | TIMESTAMP |                                                                  |
+
+### order_items
+
+| columna                | tipo      | notas                                                                 |
+| ------------------------ | --------- | ------------------------------------------------------------------------ |
+| id                        | INT       | PK                                                                        |
+| order_id                  | INT       | FK → orders (ON DELETE CASCADE)                                          |
+| variant_id                | INT       | FK → product_variants (ON DELETE SET NULL, nullable)                     |
+| product_name_snapshot      | VARCHAR   | snapshot del nombre del producto al momento de la orden                  |
+| sku_snapshot               | VARCHAR   | snapshot del SKU de la variante al momento de la orden                   |
+| quantity                  | INT       |                                                                            |
+| price                     | DECIMAL   | snapshot del precio unitario al momento de la orden                      |
+| created_at                | TIMESTAMP |                                                                            |
+
+A diferencia de `cart_items`, acá el `variant_id` puede quedar en `null` (`ON DELETE SET NULL`) porque una orden es un registro permanente: si el producto o la variante se borran después, la orden tiene que seguir mostrando qué se compró. Por eso se guardan `product_name_snapshot` y `sku_snapshot` como columnas propias en lugar de depender de la relación viva a `product_variants`/`products` (que sí es válido para `cart_items`, porque el carrito es efímero).
+
 ---
